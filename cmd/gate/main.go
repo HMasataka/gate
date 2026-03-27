@@ -30,6 +30,38 @@ func main() {
 	}
 }
 
+func startBackgroundJobs(ctx context.Context, auditUsecase *usecase.AuditUsecase, userRepo domain.UserRepository, purgeDays int) {
+	ticker := time.NewTicker(24 * time.Hour)
+	go func() {
+		defer ticker.Stop()
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case <-ticker.C:
+				if n, err := auditUsecase.Cleanup(ctx); err != nil {
+					slog.ErrorContext(ctx, "audit log cleanup failed", slog.Any("error", err))
+				} else {
+					slog.Info("audit log cleanup completed", slog.Int64("deleted", n))
+				}
+
+				before := time.Now().AddDate(0, 0, -purgeDays)
+				users, err := userRepo.ListPendingPurge(ctx, before)
+				if err != nil {
+					slog.ErrorContext(ctx, "list pending purge users failed", slog.Any("error", err))
+					continue
+				}
+				for _, u := range users {
+					if err := userRepo.HardDelete(ctx, u.ID); err != nil {
+						slog.ErrorContext(ctx, "hard delete user failed", slog.String("user_id", u.ID), slog.Any("error", err))
+					}
+				}
+				slog.Info("account purge completed", slog.Int("purged", len(users)))
+			}
+		}
+	}()
+}
+
 func run() error {
 	// 1. 設定読み込み
 	cfg, err := config.Load()
@@ -110,6 +142,9 @@ func run() error {
 		socialProviders["github"] = social.NewProviderAdapter(githubProvider)
 	}
 	socialUsecase := usecase.NewSocialUsecase(socialRepo, userRepo, sessionStore, tokenUsecase, random, socialProviders, cfg.Session)
+	auditRepo := postgres.NewAuditLogRepo(db)
+	auditUsecase := usecase.NewAuditUsecase(auditRepo, random, cfg.Auth.AuditRetentionDays)
+	userUsecase := usecase.NewUserUsecase(userRepo, sessionStore, tokenUsecase, random)
 
 	// 9. ミドルウェア初期化
 	mw := middleware.New(cfg)
@@ -121,13 +156,17 @@ func run() error {
 	mfaHandler := handler.NewMFAHandler(mfaUsecase, hasher)
 	adminClientHandler := handler.NewAdminClientHandler(clientUsecase)
 	adminRoleHandler := handler.NewAdminRoleHandler(roleUsecase, permUsecase)
+	adminUserHandler := handler.NewAdminUserHandler(userUsecase, auditUsecase)
 	oidcHandler := handler.NewOIDCHandler(oidcUsecase)
 	socialHandler := handler.NewSocialHandler(socialUsecase)
 
 	// 11. ルーター構築
-	router := handler.NewRouter(healthHandler, authHandler, oauthHandler, mfaHandler, adminClientHandler, adminRoleHandler, oidcHandler, socialHandler, jwtManager, mw)
+	router := handler.NewRouter(healthHandler, authHandler, oauthHandler, mfaHandler, adminClientHandler, adminRoleHandler, adminUserHandler, oidcHandler, socialHandler, jwtManager, mw)
 
-	// 12. HTTP サーバー起動
+	// 12. バックグラウンドジョブ起動
+	startBackgroundJobs(ctx, auditUsecase, userRepo, cfg.Auth.AccountPurgeDays)
+
+	// 13. HTTP サーバー起動
 	srv := &http.Server{
 		Addr:              fmt.Sprintf(":%d", cfg.Server.Port),
 		Handler:           router,

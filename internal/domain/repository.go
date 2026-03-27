@@ -11,6 +11,7 @@ type UserRepository interface {
 	GetByEmail(ctx context.Context, email string) (*User, error)
 	Update(ctx context.Context, user *User) error
 	SoftDelete(ctx context.Context, id string) error
+	List(ctx context.Context, offset, limit int) ([]User, int, error)
 	ListPendingPurge(ctx context.Context, before time.Time) ([]User, error)
 	HardDelete(ctx context.Context, id string) error
 }

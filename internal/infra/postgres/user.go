@@ -297,6 +297,37 @@ WHERE id = $1 AND deleted_at IS NULL`
 	return nil
 }
 
+func (repo *UserRepo) List(ctx context.Context, offset, limit int) ([]domain.User, int, error) {
+	const countQ = `SELECT COUNT(*) FROM users WHERE deleted_at IS NULL`
+	var total int
+	if err := repo.db.GetContext(ctx, &total, countQ); err != nil {
+		return nil, 0, fmt.Errorf("count users: %w", err)
+	}
+
+	const q = `
+SELECT id, email, password_hash, status, email_verified,
+	email_verify_token, email_verify_expiry,
+	password_reset_token, password_reset_expiry,
+	totp_secret, totp_enabled, recovery_codes,
+	tokens_revoked_at, version, created_at, updated_at, deleted_at
+FROM users
+WHERE deleted_at IS NULL
+ORDER BY created_at DESC
+LIMIT $1 OFFSET $2`
+
+	var rows []userRow
+	if err := repo.db.SelectContext(ctx, &rows, q, limit, offset); err != nil {
+		return nil, 0, fmt.Errorf("list users: %w", err)
+	}
+
+	users := make([]domain.User, len(rows))
+	for i, r := range rows {
+		users[i] = *r.toDomain()
+	}
+
+	return users, total, nil
+}
+
 func (repo *UserRepo) ListPendingPurge(ctx context.Context, before time.Time) ([]domain.User, error) {
 	const q = `
 SELECT id, email, password_hash, status, email_verified,

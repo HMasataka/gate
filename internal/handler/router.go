@@ -17,6 +17,7 @@ func NewRouter(
 	mfaHandler *MFAHandler,
 	adminClientHandler *AdminClientHandler,
 	adminRoleHandler *AdminRoleHandler,
+	adminUserHandler *AdminUserHandler,
 	oidcHandler *OIDCHandler,
 	socialHandler *SocialHandler,
 	jwtManager domain.JWTManager,
@@ -129,6 +130,21 @@ func NewRouter(
 					r.Delete("/", adminRoleHandler.DeletePermission)
 				})
 			})
+
+			r.Route("/users", func(r chi.Router) {
+				r.Get("/", adminUserHandler.List)
+				r.Route("/{id}", func(r chi.Router) {
+					r.Get("/", adminUserHandler.Get)
+					r.Put("/", adminUserHandler.Update)
+					r.Delete("/", adminUserHandler.Delete)
+					r.Post("/lock", adminUserHandler.Lock)
+					r.Post("/unlock", adminUserHandler.Unlock)
+					r.Post("/reset-mfa", adminUserHandler.ResetMFA)
+					r.Post("/revoke-tokens", adminUserHandler.RevokeAllTokens)
+				})
+			})
+
+			r.Get("/audit-logs", adminUserHandler.ListAuditLogs)
 		})
 	})
 

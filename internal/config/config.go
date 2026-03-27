@@ -64,6 +64,7 @@ type AuthConfig struct {
 	LoginFailLockThreshold  int           `env:"LOGIN_FAIL_LOCK_THRESHOLD" envDefault:"5"`
 	LoginFailLockDuration   time.Duration `env:"LOGIN_FAIL_LOCK_DURATION"  envDefault:"30m"`
 	AccountPurgeDays        int           `env:"ACCOUNT_PURGE_DAYS"        envDefault:"30"`
+	AuditRetentionDays      int           `env:"AUDIT_RETENTION_DAYS"      envDefault:"90"`
 }
 
 type JWTConfig struct {
