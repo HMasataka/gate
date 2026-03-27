@@ -55,34 +55,28 @@ func startBackgroundJobs(ctx context.Context, auditUsecase *usecase.AuditUsecase
 }
 
 func run() error {
-	// 1. 設定読み込み
 	cfg, err := config.Load()
 	if err != nil {
 		return fmt.Errorf("load config: %w", err)
 	}
 
-	// 2. 設定バリデーション
 	if err := cfg.Validate(); err != nil {
 		return fmt.Errorf("validate config: %w", err)
 	}
 
-	// 3. slog セットアップ
 	setupLogger(cfg.Log)
 
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer stop()
 
-	// 4. アプリケーション初期化 (DI)
 	a, err := initApp(ctx, cfg)
 	if err != nil {
 		return err
 	}
 	defer a.cleanup()
 
-	// 5. バックグラウンドジョブ起動
 	startBackgroundJobs(ctx, a.auditUsecase, a.userRepo, cfg.Auth.AccountPurgeDays)
 
-	// 6. HTTP サーバー起動
 	srv := &http.Server{
 		Addr:              fmt.Sprintf(":%d", cfg.Server.Port),
 		Handler:           a.router,
@@ -101,7 +95,6 @@ func run() error {
 		close(errCh)
 	}()
 
-	// 7. グレースフルシャットダウン
 	select {
 	case err := <-errCh:
 		return fmt.Errorf("server error: %w", err)

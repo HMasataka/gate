@@ -27,27 +27,23 @@ type app struct {
 }
 
 func initApp(ctx context.Context, cfg *config.Config) (*app, error) {
-	// DB 接続
 	db, err := postgres.NewDB(ctx, cfg.Database)
 	if err != nil {
 		return nil, fmt.Errorf("connect database: %w", err)
 	}
 
-	// マイグレーション実行
 	if err := postgres.RunMigrations(ctx, db, cfg.Database.MigrateTimeout); err != nil {
 		db.Close()
 		return nil, fmt.Errorf("run migrations: %w", err)
 	}
 	slog.Info("database migrations completed")
 
-	// Redis 接続
 	rdb, err := redisclient.NewClient(ctx, cfg.Redis)
 	if err != nil {
 		db.Close()
 		return nil, fmt.Errorf("connect redis: %w", err)
 	}
 
-	// インフラ層初期化
 	hasher := crypto.NewArgon2Hasher(cfg.Argon2)
 	random := &crypto.SecureRandom{}
 	sessionStore := redisclient.NewSessionStore(rdb, cfg.Session)
@@ -68,7 +64,6 @@ func initApp(ctx context.Context, cfg *config.Config) (*app, error) {
 		return nil, fmt.Errorf("create jwt manager: %w", err)
 	}
 
-	// ユースケース初期化
 	txManager := postgres.NewTxManager(db)
 	tokenUsecase := usecase.NewTokenUsecase(tokenRepo, userRepo, jwtManager, random, cfg.Token, txManager)
 	authUsecase := usecase.NewAuthUsecase(userRepo, hasher, mail, sessionStore, random, tokenUsecase, cfg.Auth, cfg.Session)
@@ -83,7 +78,6 @@ func initApp(ctx context.Context, cfg *config.Config) (*app, error) {
 	serverURL := fmt.Sprintf("http://localhost:%d", cfg.Server.Port)
 	oidcUsecase := usecase.NewOIDCUsecase(userRepo, jwtManager, serverURL)
 
-	// ソーシャルプロバイダ設定
 	socialProviders := map[string]usecase.SocialProvider{}
 	if cfg.Social.GoogleClientID != "" {
 		googleProvider := social.NewGoogleProvider(cfg.Social.GoogleClientID, cfg.Social.GoogleClientSecret, cfg.Social.GoogleRedirectURI)
@@ -98,10 +92,8 @@ func initApp(ctx context.Context, cfg *config.Config) (*app, error) {
 	auditUsecase := usecase.NewAuditUsecase(auditRepo, random, cfg.Auth.AuditRetentionDays)
 	userUsecase := usecase.NewUserUsecase(userRepo, sessionStore, tokenUsecase, random)
 
-	// ミドルウェア初期化
 	mw := middleware.New(cfg)
 
-	// ハンドラ初期化
 	healthHandler := handler.NewHealthHandler(db, rdb)
 	authHandler := handler.NewAuthHandler(authUsecase)
 	oauthHandler := handler.NewOAuthHandler(oauthUsecase, tokenUsecase)
@@ -112,7 +104,6 @@ func initApp(ctx context.Context, cfg *config.Config) (*app, error) {
 	oidcHandler := handler.NewOIDCHandler(oidcUsecase)
 	socialHandler := handler.NewSocialHandler(socialUsecase)
 
-	// ルーター構築
 	router := handler.NewRouter(healthHandler, authHandler, oauthHandler, mfaHandler, adminClientHandler, adminRoleHandler, adminUserHandler, oidcHandler, socialHandler, jwtManager, mw, rateLimiter, cfg.RateLimit.HTTPSRedirect)
 
 	cleanup := func() {
