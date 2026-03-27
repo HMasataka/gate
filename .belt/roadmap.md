@@ -121,12 +121,12 @@ v0.10 (Security & Ops) ※ v0.9 完了後
 **ゴール**: Authorization Code + PKCE、Client Credentials、クライアント管理、トークンイントロスペクションが動作する
 **完動品としての価値**: 外部アプリが OAuth 2.0 でアクセストークンを取得できる。サーバー間通信用 Client Credentials も利用可能
 
-- [ ] ClientRepository PostgreSQL 実装 (`internal/infra/postgres/client.go`: OAuthClient CRUD、リダイレクト URI 管理 (最大 10、厳密一致、スキーム制限)、許可スコープ、クライアント認証、`tokens_revoked_at`)
-- [ ] OAuth ユースケース実装 (`internal/usecase/oauth.go`: 認可コード発行/検証 (PKCE S256、有効期限設定可能)、再利用検出、Client Credentials、イントロスペクション、スコープ-パーミッション連携)
-- [ ] Admin クライアント管理ユースケース (`internal/usecase/client.go`: 登録/更新/削除、secret ローテーション、クライアント単位全トークン失効)
-- [ ] OAuth ハンドラ実装 (`internal/handler/oauth.go`: `GET /oauth/authorize`, `POST /oauth/token` (全 grant_type), `POST /oauth/revoke`, `POST /oauth/introspect`、RFC 6749 準拠エラー)
-- [ ] Admin クライアント管理ハンドラ (`internal/handler/admin_client.go`: CRUD エンドポイント)
-- [ ] ルーター + main.go ワイヤリング更新 (ClientRepository, OAuthUsecase, ClientUsecase, OAuthHandler, AdminClientHandler)
+- [x] ClientRepository PostgreSQL 実装 (`internal/infra/postgres/client.go`: OAuthClient CRUD、リダイレクト URI 管理 (最大 10、厳密一致、スキーム制限)、許可スコープ、クライアント認証、`tokens_revoked_at`)
+- [x] OAuth ユースケース実装 (`internal/usecase/oauth.go`: 認可コード発行/検証 (PKCE S256、有効期限設定可能)、再利用検出、Client Credentials、イントロスペクション、スコープ-パーミッション連携)
+- [x] Admin クライアント管理ユースケース (`internal/usecase/client.go`: 登録/更新/削除、secret ローテーション、クライアント単位全トークン失効)
+- [x] OAuth ハンドラ実装 (`internal/handler/oauth.go`: `GET /oauth/authorize`, `POST /oauth/token` (全 grant_type), `POST /oauth/revoke`, `POST /oauth/introspect`、RFC 6749 準拠エラー)
+- [x] Admin クライアント管理ハンドラ (`internal/handler/admin_client.go`: CRUD エンドポイント)
+- [x] ルーター + main.go ワイヤリング更新 (ClientRepository, OAuthUsecase, ClientUsecase, OAuthHandler, AdminClientHandler)
 
 ---
 
@@ -135,10 +135,10 @@ v0.10 (Security & Ops) ※ v0.9 完了後
 **ゴール**: ID Token 発行、UserInfo、ディスカバリ、JWKS が動作する
 **完動品としての価値**: Gate が OIDC Provider として機能し、クライアントは `/.well-known/openid-configuration` から設定を自動取得できる
 
-- [ ] OIDC ユースケース実装 (`internal/usecase/oidc.go`: ID Token 発行 (必須クレーム + 標準クレーム)、UserInfo レスポンス、ディスカバリメタデータ、鍵ローテーション (旧鍵保持 = 最大 TTL + 10 分))
-- [ ] OIDC ハンドラ実装 (`internal/handler/oidc.go`: `GET /.well-known/openid-configuration`, `GET /.well-known/jwks.json`, `GET /oauth/userinfo`)
-- [ ] OAuth 認可フローへの OIDC 統合 (`internal/usecase/oauth.go` 更新: `scope` に `openid` 含む場合に ID Token 発行、`nonce` 伝搬)
-- [ ] ルーター + main.go ワイヤリング更新 (OIDCUsecase, OIDCHandler)
+- [x] OIDC ユースケース実装 (`internal/usecase/oidc.go`: ID Token 発行 (必須クレーム + 標準クレーム)、UserInfo レスポンス、ディスカバリメタデータ、鍵ローテーション (旧鍵保持 = 最大 TTL + 10 分))
+- [x] OIDC ハンドラ実装 (`internal/handler/oidc.go`: `GET /.well-known/openid-configuration`, `GET /.well-known/jwks.json`, `GET /oauth/userinfo`)
+- [x] OAuth 認可フローへの OIDC 統合 (`internal/usecase/oauth.go` 更新: `scope` に `openid` 含む場合に ID Token 発行、`nonce` 伝搬)
+- [x] ルーター + main.go ワイヤリング更新 (OIDCUsecase, OIDCHandler)
 
 ---
 
@@ -147,12 +147,12 @@ v0.10 (Security & Ops) ※ v0.9 完了後
 **ゴール**: ロール/パーミッション CRUD、階層継承、循環参照検出、パーミッション解決 (Redis キャッシュ)、認可ミドルウェアが動作する
 **完動品としての価値**: 管理者がロール/パーミッションを定義・割り当てし、API エンドポイントごとのアクセス制御が機能する
 
-- [ ] RoleRepository PostgreSQL 実装 (`internal/infra/postgres/role.go`: ロール/パーミッション CRUD、階層 (parent_id)、循環参照検出 (再帰 CTE、最大深度 10)、カスケード除去)
-- [ ] Redis パーミッションキャッシュ実装 (`internal/infra/redis/cache.go`: `permissions:{user_id}` Set、TTL 5 分、キャッシュ無効化)
-- [ ] ロール/パーミッション管理ユースケース + パーミッション解決 (`internal/usecase/role.go`, `permission.go`: CRUD、割り当て、パーミッション解決 (直接 + 階層展開の和集合)、Redis キャッシュ連携)
-- [ ] パーミッション認可ミドルウェア (`internal/middleware/permission.go`: `RequirePermission("...")` 形式、403 Forbidden)
-- [ ] Admin ロール/パーミッション管理ハンドラ (`internal/handler/admin_role.go`: ロール CRUD、パーミッション CRUD、割り当て)
-- [ ] ルーター + main.go ワイヤリング更新 (Admin エンドポイントに `RequirePermission("admin:access")` 適用)
+- [x] RoleRepository PostgreSQL 実装 (`internal/infra/postgres/role.go`: ロール/パーミッション CRUD、階層 (parent_id)、循環参照検出 (再帰 CTE、最大深度 10)、カスケード除去)
+- [x] Redis パーミッションキャッシュ実装 (`internal/infra/redis/cache.go`: `permissions:{user_id}` Set、TTL 5 分、キャッシュ無効化)
+- [x] ロール/パーミッション管理ユースケース + パーミッション解決 (`internal/usecase/role.go`, `permission.go`: CRUD、割り当て、パーミッション解決 (直接 + 階層展開の和集合)、Redis キャッシュ連携)
+- [x] パーミッション認可ミドルウェア (`internal/middleware/permission.go`: `RequirePermission("...")` 形式、403 Forbidden)
+- [x] Admin ロール/パーミッション管理ハンドラ (`internal/handler/admin_role.go`: ロール CRUD、パーミッション CRUD、割り当て)
+- [x] ルーター + main.go ワイヤリング更新 (Admin エンドポイントに `RequirePermission("admin:access")` 適用)
 
 ---
 
@@ -161,12 +161,12 @@ v0.10 (Security & Ops) ※ v0.9 完了後
 **ゴール**: 汎用 OIDC コネクタベースで Google/GitHub/Apple ソーシャルログインが動作する。同一メール自動リンクが行われる
 **完動品としての価値**: ユーザーが Google/GitHub/Apple アカウントでログインでき、既存アカウントと自動リンクされる
 
-- [ ] 汎用 OIDC プロバイダコネクタ実装 (`internal/infra/social/provider.go`, `oidc.go`: SocialProvider インターフェース、OIDC Discovery、認可 URL 生成、code→token 交換、ユーザー情報取得)
-- [ ] Google/GitHub/Apple プロバイダ実装 (`internal/infra/social/google.go`, `github.go`, `apple.go`: 各プロバイダ固有のカスタマイズ)
-- [ ] SocialConnectionRepository PostgreSQL 実装 (`internal/infra/postgres/social.go`: CRUD、プロバイダ+provider_user_id ユニーク検索)
-- [ ] ソーシャルログインユースケース (`internal/usecase/social.go`: 認可 URL 生成、コールバック、アカウントリンク (sub 検索 → 同一メール自動リンク → 新規作成)、プロバイダ側メール変更対応)
-- [ ] ソーシャルログインハンドラ (`internal/handler/social.go`: `GET /api/v1/auth/social/{provider}/authorize`, `callback`)
-- [ ] ルーター + main.go ワイヤリング更新
+- [x] 汎用 OIDC プロバイダコネクタ実装 (`internal/infra/social/provider.go`, `oidc.go`: SocialProvider インターフェース、OIDC Discovery、認可 URL 生成、code→token 交換、ユーザー情報取得)
+- [x] Google/GitHub/Apple プロバイダ実装 (`internal/infra/social/google.go`, `github.go`, `apple.go`: 各プロバイダ固有のカスタマイズ)
+- [x] SocialConnectionRepository PostgreSQL 実装 (`internal/infra/postgres/social.go`: CRUD、プロバイダ+provider_user_id ユニーク検索)
+- [x] ソーシャルログインユースケース (`internal/usecase/social.go`: 認可 URL 生成、コールバック、アカウントリンク (sub 検索 → 同一メール自動リンク → 新規作成)、プロバイダ側メール変更対応)
+- [x] ソーシャルログインハンドラ (`internal/handler/social.go`: `GET /api/v1/auth/social/{provider}/authorize`, `callback`)
+- [x] ルーター + main.go ワイヤリング更新
 
 ---
 
