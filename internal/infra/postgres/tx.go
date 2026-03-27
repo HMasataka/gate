@@ -7,8 +7,20 @@ import (
 	"github.com/jmoiron/sqlx"
 )
 
-func RunInTx(ctx context.Context, db *sqlx.DB, fn func(tx *sqlx.Tx) error) error {
-	tx, err := db.BeginTxx(ctx, nil)
+// TxManager implements domain.TxRunner using PostgreSQL transactions.
+type TxManager struct {
+	db *sqlx.DB
+}
+
+// NewTxManager creates a new TxManager.
+func NewTxManager(db *sqlx.DB) *TxManager {
+	return &TxManager{db: db}
+}
+
+// RunInTx begins a transaction, injects it into ctx, and calls fn.
+// Rolls back on error or panic; commits on success.
+func (m *TxManager) RunInTx(ctx context.Context, fn func(ctx context.Context) error) error {
+	tx, err := m.db.BeginTxx(ctx, nil)
 	if err != nil {
 		return fmt.Errorf("begin tx: %w", err)
 	}
@@ -18,7 +30,8 @@ func RunInTx(ctx context.Context, db *sqlx.DB, fn func(tx *sqlx.Tx) error) error
 			panic(p)
 		}
 	}()
-	if err := fn(tx); err != nil {
+	txCtx := injectTx(ctx, tx)
+	if err := fn(txCtx); err != nil {
 		_ = tx.Rollback()
 		return err
 	}

@@ -36,6 +36,7 @@ type SocialUsecase struct {
 	random     domain.RandomGenerator
 	providers  map[string]SocialProvider
 	sessCfg    config.SessionConfig
+	txRunner   domain.TxRunner
 }
 
 // NewSocialUsecase creates a new SocialUsecase.
@@ -47,6 +48,7 @@ func NewSocialUsecase(
 	random domain.RandomGenerator,
 	providers map[string]SocialProvider,
 	sessCfg config.SessionConfig,
+	txRunner domain.TxRunner,
 ) *SocialUsecase {
 	return &SocialUsecase{
 		socialRepo: socialRepo,
@@ -56,6 +58,7 @@ func NewSocialUsecase(
 		random:     random,
 		providers:  providers,
 		sessCfg:    sessCfg,
+		txRunner:   txRunner,
 	}
 }
 
@@ -119,7 +122,7 @@ func (u *SocialUsecase) HandleCallback(ctx context.Context, provider, code, ipAd
 				return nil, fmt.Errorf("create social connection for existing user: %w", err)
 			}
 		} else {
-			// New user: create account and social connection.
+			// New user: create account and social connection atomically.
 			now := time.Now()
 			status := domain.UserStatusUnverified
 			if userInfo.EmailVerified {
@@ -136,10 +139,6 @@ func (u *SocialUsecase) HandleCallback(ctx context.Context, provider, code, ipAd
 				CreatedAt:     now,
 				UpdatedAt:     now,
 			}
-			if err := u.userRepo.Create(ctx, user); err != nil {
-				return nil, fmt.Errorf("create user for social login: %w", err)
-			}
-
 			newConn := &domain.SocialConnection{
 				ID:             u.random.GenerateUUID(),
 				UserID:         user.ID,
@@ -149,8 +148,16 @@ func (u *SocialUsecase) HandleCallback(ctx context.Context, provider, code, ipAd
 				Name:           userInfo.Name,
 				AvatarURL:      userInfo.AvatarURL,
 			}
-			if err := u.socialRepo.Create(ctx, newConn); err != nil {
-				return nil, fmt.Errorf("create social connection for new user: %w", err)
+			if err := u.txRunner.RunInTx(ctx, func(ctx context.Context) error {
+				if err := u.userRepo.Create(ctx, user); err != nil {
+					return fmt.Errorf("create user for social login: %w", err)
+				}
+				if err := u.socialRepo.Create(ctx, newConn); err != nil {
+					return fmt.Errorf("create social connection for new user: %w", err)
+				}
+				return nil
+			}); err != nil {
+				return nil, err
 			}
 		}
 	}

@@ -21,6 +21,10 @@ func NewAuditLogRepo(db *sqlx.DB) *AuditLogRepo {
 	return &AuditLogRepo{db: db}
 }
 
+func (repo *AuditLogRepo) ext(ctx context.Context) dbExt {
+	return extFromCtx(ctx, repo.db)
+}
+
 type auditLogRow struct {
 	ID        string         `db:"id"`
 	UserID    sql.NullString `db:"user_id"`
@@ -70,7 +74,7 @@ VALUES ($1, $2, $3, $4, $5, $6)`
 		userID = sql.NullString{String: *log.UserID, Valid: true}
 	}
 
-	if _, err := repo.db.ExecContext(ctx, q, log.ID, userID, string(log.Action), log.IPAddress, log.UserAgent, metaJSON); err != nil {
+	if _, err := repo.ext(ctx).ExecContext(ctx, q, log.ID, userID, string(log.Action), log.IPAddress, log.UserAgent, metaJSON); err != nil {
 		return fmt.Errorf("create audit log: %w", err)
 	}
 
@@ -105,7 +109,7 @@ func (repo *AuditLogRepo) List(ctx context.Context, filter domain.AuditLogFilter
 
 	countQ := "SELECT COUNT(*) FROM audit_logs" + where
 	var total int
-	if err := repo.db.GetContext(ctx, &total, countQ, args...); err != nil {
+	if err := repo.ext(ctx).GetContext(ctx, &total, countQ, args...); err != nil {
 		return nil, 0, fmt.Errorf("count audit logs: %w", err)
 	}
 
@@ -119,7 +123,7 @@ func (repo *AuditLogRepo) List(ctx context.Context, filter domain.AuditLogFilter
 		fmt.Sprintf(" ORDER BY created_at DESC LIMIT $%d OFFSET $%d", argIdx, argIdx+1)
 	args = append(args, limit, filter.Offset)
 
-	rows, err := repo.db.QueryxContext(ctx, listQ, args...)
+	rows, err := repo.ext(ctx).QueryxContext(ctx, listQ, args...)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return []domain.AuditLog{}, total, nil
@@ -151,7 +155,7 @@ func (repo *AuditLogRepo) List(ctx context.Context, filter domain.AuditLogFilter
 func (repo *AuditLogRepo) DeleteBefore(ctx context.Context, before time.Time) (int64, error) {
 	const q = `DELETE FROM audit_logs WHERE created_at < $1`
 
-	result, err := repo.db.ExecContext(ctx, q, before)
+	result, err := repo.ext(ctx).ExecContext(ctx, q, before)
 	if err != nil {
 		return 0, fmt.Errorf("delete audit logs before %s: %w", before, err)
 	}

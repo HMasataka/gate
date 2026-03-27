@@ -22,6 +22,10 @@ func NewSocialConnectionRepo(db *sqlx.DB) *SocialConnectionRepo {
 	return &SocialConnectionRepo{db: db}
 }
 
+func (repo *SocialConnectionRepo) ext(ctx context.Context) dbExt {
+	return extFromCtx(ctx, repo.db)
+}
+
 type socialConnectionRow struct {
 	ID             string    `db:"id"`
 	UserID         string    `db:"user_id"`
@@ -68,7 +72,7 @@ RETURNING id, created_at, updated_at`
 		AvatarURL:      conn.AvatarURL,
 	}
 
-	stmt, err := repo.db.PrepareNamedContext(ctx, q)
+	stmt, err := repo.ext(ctx).PrepareNamedContext(ctx, q)
 	if err != nil {
 		return fmt.Errorf("prepare create social connection: %w", err)
 	}
@@ -99,7 +103,7 @@ FROM social_connections
 WHERE provider = $1 AND provider_user_id = $2`
 
 	var row socialConnectionRow
-	if err := repo.db.GetContext(ctx, &row, q, provider, providerUserID); err != nil {
+	if err := repo.ext(ctx).GetContext(ctx, &row, q, provider, providerUserID); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, domain.ErrNotFound
 		}
@@ -117,7 +121,7 @@ FROM social_connections
 WHERE user_id = $1`
 
 	var rows []socialConnectionRow
-	if err := repo.db.SelectContext(ctx, &rows, q, userID); err != nil {
+	if err := repo.ext(ctx).SelectContext(ctx, &rows, q, userID); err != nil {
 		return nil, fmt.Errorf("get social connections by user_id: %w", err)
 	}
 
@@ -146,7 +150,7 @@ WHERE id = :id`
 		AvatarURL: conn.AvatarURL,
 	}
 
-	stmt, err := repo.db.PrepareNamedContext(ctx, q)
+	stmt, err := repo.ext(ctx).PrepareNamedContext(ctx, q)
 	if err != nil {
 		return fmt.Errorf("prepare update social connection: %w", err)
 	}
@@ -172,7 +176,7 @@ WHERE id = :id`
 func (repo *SocialConnectionRepo) Delete(ctx context.Context, id string) error {
 	const q = `DELETE FROM social_connections WHERE id = $1`
 
-	result, err := repo.db.ExecContext(ctx, q, id)
+	result, err := repo.ext(ctx).ExecContext(ctx, q, id)
 	if err != nil {
 		return fmt.Errorf("delete social connection: %w", err)
 	}

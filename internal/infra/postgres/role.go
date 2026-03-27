@@ -20,6 +20,10 @@ func NewRoleRepo(db *sqlx.DB) *RoleRepo {
 	return &RoleRepo{db: db}
 }
 
+func (repo *RoleRepo) ext(ctx context.Context) dbExt {
+	return extFromCtx(ctx, repo.db)
+}
+
 type roleRow struct {
 	ID          string         `db:"id"`
 	Name        string         `db:"name"`
@@ -59,7 +63,7 @@ RETURNING id, created_at, updated_at`
 		row.ParentID = sql.NullString{String: *role.ParentID, Valid: true}
 	}
 
-	stmt, err := repo.db.PrepareNamedContext(ctx, q)
+	stmt, err := repo.ext(ctx).PrepareNamedContext(ctx, q)
 	if err != nil {
 		return fmt.Errorf("prepare create role: %w", err)
 	}
@@ -89,7 +93,7 @@ FROM roles
 WHERE id = $1`
 
 	var row roleRow
-	if err := repo.db.GetContext(ctx, &row, q, id); err != nil {
+	if err := repo.ext(ctx).GetContext(ctx, &row, q, id); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, domain.ErrNotFound
 		}
@@ -117,7 +121,7 @@ WHERE id = :id`
 		row.ParentID = sql.NullString{String: *role.ParentID, Valid: true}
 	}
 
-	stmt, err := repo.db.PrepareNamedContext(ctx, q)
+	stmt, err := repo.ext(ctx).PrepareNamedContext(ctx, q)
 	if err != nil {
 		return fmt.Errorf("prepare update role: %w", err)
 	}
@@ -142,7 +146,7 @@ WHERE id = :id`
 func (repo *RoleRepo) Delete(ctx context.Context, id string) error {
 	const q = `DELETE FROM roles WHERE id = $1`
 
-	result, err := repo.db.ExecContext(ctx, q, id)
+	result, err := repo.ext(ctx).ExecContext(ctx, q, id)
 	if err != nil {
 		return fmt.Errorf("delete role: %w", err)
 	}
@@ -167,12 +171,12 @@ ORDER BY created_at ASC
 LIMIT $1 OFFSET $2`
 
 	var total int
-	if err := repo.db.GetContext(ctx, &total, countQ); err != nil {
+	if err := repo.ext(ctx).GetContext(ctx, &total, countQ); err != nil {
 		return nil, 0, fmt.Errorf("count roles: %w", err)
 	}
 
 	var rows []roleRow
-	if err := repo.db.SelectContext(ctx, &rows, listQ, limit, offset); err != nil {
+	if err := repo.ext(ctx).SelectContext(ctx, &rows, listQ, limit, offset); err != nil {
 		return nil, 0, fmt.Errorf("list roles: %w", err)
 	}
 
@@ -190,7 +194,7 @@ INSERT INTO user_roles (user_id, role_id)
 VALUES ($1, $2)
 ON CONFLICT (user_id, role_id) DO NOTHING`
 
-	if _, err := repo.db.ExecContext(ctx, q, userID, roleID); err != nil {
+	if _, err := repo.ext(ctx).ExecContext(ctx, q, userID, roleID); err != nil {
 		return fmt.Errorf("assign role to user: %w", err)
 	}
 
@@ -200,7 +204,7 @@ ON CONFLICT (user_id, role_id) DO NOTHING`
 func (repo *RoleRepo) RemoveFromUser(ctx context.Context, userID, roleID string) error {
 	const q = `DELETE FROM user_roles WHERE user_id = $1 AND role_id = $2`
 
-	if _, err := repo.db.ExecContext(ctx, q, userID, roleID); err != nil {
+	if _, err := repo.ext(ctx).ExecContext(ctx, q, userID, roleID); err != nil {
 		return fmt.Errorf("remove role from user: %w", err)
 	}
 
@@ -216,7 +220,7 @@ WHERE ur.user_id = $1
 ORDER BY r.created_at ASC`
 
 	var rows []roleRow
-	if err := repo.db.SelectContext(ctx, &rows, q, userID); err != nil {
+	if err := repo.ext(ctx).SelectContext(ctx, &rows, q, userID); err != nil {
 		return nil, fmt.Errorf("get user roles: %w", err)
 	}
 
@@ -241,7 +245,7 @@ WITH RECURSIVE ancestors AS (
 SELECT EXISTS (SELECT 1 FROM ancestors WHERE id = $2)`
 
 	var exists bool
-	if err := repo.db.QueryRowContext(ctx, q, parentID, roleID).Scan(&exists); err != nil {
+	if err := repo.ext(ctx).QueryRowContext(ctx, q, parentID, roleID).Scan(&exists); err != nil {
 		return false, fmt.Errorf("detect cycle: %w", err)
 	}
 

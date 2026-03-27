@@ -119,12 +119,13 @@ func run() error {
 	}
 
 	// 8. ユースケース初期化
-	tokenUsecase := usecase.NewTokenUsecase(tokenRepo, userRepo, jwtManager, random, cfg.Token)
+	txManager := postgres.NewTxManager(db)
+	tokenUsecase := usecase.NewTokenUsecase(tokenRepo, userRepo, jwtManager, random, cfg.Token, txManager)
 	authUsecase := usecase.NewAuthUsecase(userRepo, hasher, mail, sessionStore, random, tokenUsecase, cfg.Auth, cfg.Session)
 	mfaUsecase := usecase.NewMFAUsecase(userRepo, random, cfg.MFA)
 	// AuthorizationCodeRepository は未実装のため nil を渡す
 	var codeRepo domain.AuthorizationCodeRepository
-	oauthUsecase := usecase.NewOAuthUsecase(clientRepo, codeRepo, tokenUsecase, random, cfg.OAuth, cfg.Token)
+	oauthUsecase := usecase.NewOAuthUsecase(clientRepo, codeRepo, tokenUsecase, random, cfg.OAuth, cfg.Token, txManager)
 	clientUsecase := usecase.NewClientUsecase(clientRepo, random, cfg.OAuth)
 	permCache := redisclient.NewPermissionCache(rdb, permRepo, 5*time.Minute)
 	roleUsecase := usecase.NewRoleUsecase(roleRepo, permRepo, permCache, random)
@@ -142,7 +143,7 @@ func run() error {
 		githubProvider := social.NewGitHubProvider(cfg.Social.GitHubClientID, cfg.Social.GitHubClientSecret, cfg.Social.GitHubRedirectURI)
 		socialProviders["github"] = social.NewProviderAdapter(githubProvider)
 	}
-	socialUsecase := usecase.NewSocialUsecase(socialRepo, userRepo, sessionStore, tokenUsecase, random, socialProviders, cfg.Session)
+	socialUsecase := usecase.NewSocialUsecase(socialRepo, userRepo, sessionStore, tokenUsecase, random, socialProviders, cfg.Session, txManager)
 	auditRepo := postgres.NewAuditLogRepo(db)
 	auditUsecase := usecase.NewAuditUsecase(auditRepo, random, cfg.Auth.AuditRetentionDays)
 	userUsecase := usecase.NewUserUsecase(userRepo, sessionStore, tokenUsecase, random)

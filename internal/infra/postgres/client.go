@@ -22,6 +22,10 @@ func NewClientRepo(db *sqlx.DB) *ClientRepo {
 	return &ClientRepo{db: db}
 }
 
+func (repo *ClientRepo) ext(ctx context.Context) dbExt {
+	return extFromCtx(ctx, repo.db)
+}
+
 type clientRow struct {
 	ID              string         `db:"id"`
 	Secret          string         `db:"secret"`
@@ -80,7 +84,7 @@ RETURNING id, created_at, updated_at`
 		row.TokensRevokedAt = sql.NullTime{Time: *client.TokensRevokedAt, Valid: true}
 	}
 
-	stmt, err := repo.db.PrepareNamedContext(ctx, q)
+	stmt, err := repo.ext(ctx).PrepareNamedContext(ctx, q)
 	if err != nil {
 		return fmt.Errorf("prepare create client: %w", err)
 	}
@@ -116,7 +120,7 @@ FROM oauth_clients
 WHERE id = $1`
 
 	var row clientRow
-	if err := repo.db.GetContext(ctx, &row, q, id); err != nil {
+	if err := repo.ext(ctx).GetContext(ctx, &row, q, id); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, domain.ErrNotFound
 		}
@@ -151,7 +155,7 @@ WHERE id = :id`
 		row.TokensRevokedAt = sql.NullTime{Time: *client.TokensRevokedAt, Valid: true}
 	}
 
-	stmt, err := repo.db.PrepareNamedContext(ctx, q)
+	stmt, err := repo.ext(ctx).PrepareNamedContext(ctx, q)
 	if err != nil {
 		return fmt.Errorf("prepare update client: %w", err)
 	}
@@ -176,7 +180,7 @@ WHERE id = :id`
 func (repo *ClientRepo) Delete(ctx context.Context, id string) error {
 	const q = `DELETE FROM oauth_clients WHERE id = $1`
 
-	result, err := repo.db.ExecContext(ctx, q, id)
+	result, err := repo.ext(ctx).ExecContext(ctx, q, id)
 	if err != nil {
 		return fmt.Errorf("delete client: %w", err)
 	}
@@ -196,7 +200,7 @@ func (repo *ClientRepo) List(ctx context.Context, offset, limit int) ([]domain.O
 	const countQ = `SELECT COUNT(*) FROM oauth_clients`
 
 	var total int
-	if err := repo.db.QueryRowContext(ctx, countQ).Scan(&total); err != nil {
+	if err := repo.ext(ctx).QueryRowContext(ctx, countQ).Scan(&total); err != nil {
 		return nil, 0, fmt.Errorf("count clients: %w", err)
 	}
 
@@ -209,7 +213,7 @@ ORDER BY created_at DESC
 LIMIT $1 OFFSET $2`
 
 	var rows []clientRow
-	if err := repo.db.SelectContext(ctx, &rows, q, limit, offset); err != nil {
+	if err := repo.ext(ctx).SelectContext(ctx, &rows, q, limit, offset); err != nil {
 		return nil, 0, fmt.Errorf("list clients: %w", err)
 	}
 

@@ -4,8 +4,7 @@ CREATE TABLE IF NOT EXISTS users (
     id           UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     email        VARCHAR(255) NOT NULL,
     password_hash TEXT NOT NULL,
-    status       VARCHAR(20) NOT NULL DEFAULT 'unverified'
-                 CHECK (status IN ('unverified', 'active', 'locked', 'deleted')),
+    status       VARCHAR(20) NOT NULL DEFAULT 'unverified' CHECK (status IN ('unverified', 'active', 'locked', 'deleted')),
     email_verified BOOLEAN NOT NULL DEFAULT FALSE,
     email_verify_token   TEXT,
     email_verify_expiry  TIMESTAMPTZ,

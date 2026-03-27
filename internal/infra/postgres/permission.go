@@ -20,6 +20,10 @@ func NewPermissionRepo(db *sqlx.DB) *PermissionRepo {
 	return &PermissionRepo{db: db}
 }
 
+func (r *PermissionRepo) ext(ctx context.Context) dbExt {
+	return extFromCtx(ctx, r.db)
+}
+
 type permissionRow struct {
 	ID          string    `db:"id"`
 	Name        string    `db:"name"`
@@ -41,7 +45,7 @@ func (r *permissionRow) toDomain() *domain.Permission {
 func (r *PermissionRepo) Create(ctx context.Context, perm *domain.Permission) error {
 	query := `INSERT INTO permissions (id, name, description, created_at, updated_at)
 	          VALUES (:id, :name, :description, :created_at, :updated_at)`
-	stmt, err := r.db.PrepareNamedContext(ctx, query)
+	stmt, err := r.ext(ctx).PrepareNamedContext(ctx, query)
 	if err != nil {
 		return fmt.Errorf("prepare create permission: %w", err)
 	}
@@ -62,7 +66,7 @@ func (r *PermissionRepo) Create(ctx context.Context, perm *domain.Permission) er
 
 func (r *PermissionRepo) GetByID(ctx context.Context, id string) (*domain.Permission, error) {
 	var row permissionRow
-	if err := r.db.GetContext(ctx, &row, `SELECT id, name, description, created_at, updated_at FROM permissions WHERE id = $1`, id); err != nil {
+	if err := r.ext(ctx).GetContext(ctx, &row, `SELECT id, name, description, created_at, updated_at FROM permissions WHERE id = $1`, id); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, domain.ErrNotFound
 		}
@@ -73,7 +77,7 @@ func (r *PermissionRepo) GetByID(ctx context.Context, id string) (*domain.Permis
 
 func (r *PermissionRepo) Update(ctx context.Context, perm *domain.Permission) error {
 	query := `UPDATE permissions SET name = :name, description = :description, updated_at = :updated_at WHERE id = :id`
-	stmt, err := r.db.PrepareNamedContext(ctx, query)
+	stmt, err := r.ext(ctx).PrepareNamedContext(ctx, query)
 	if err != nil {
 		return fmt.Errorf("prepare update permission: %w", err)
 	}
@@ -96,7 +100,7 @@ func (r *PermissionRepo) Update(ctx context.Context, perm *domain.Permission) er
 }
 
 func (r *PermissionRepo) Delete(ctx context.Context, id string) error {
-	if _, err := r.db.ExecContext(ctx, `DELETE FROM permissions WHERE id = $1`, id); err != nil {
+	if _, err := r.ext(ctx).ExecContext(ctx, `DELETE FROM permissions WHERE id = $1`, id); err != nil {
 		return fmt.Errorf("delete permission: %w", err)
 	}
 	return nil
@@ -104,12 +108,12 @@ func (r *PermissionRepo) Delete(ctx context.Context, id string) error {
 
 func (r *PermissionRepo) List(ctx context.Context, offset, limit int) ([]domain.Permission, int, error) {
 	var total int
-	if err := r.db.GetContext(ctx, &total, `SELECT COUNT(*) FROM permissions`); err != nil {
+	if err := r.ext(ctx).GetContext(ctx, &total, `SELECT COUNT(*) FROM permissions`); err != nil {
 		return nil, 0, fmt.Errorf("count permissions: %w", err)
 	}
 
 	var rows []permissionRow
-	if err := r.db.SelectContext(ctx, &rows, `SELECT id, name, description, created_at, updated_at FROM permissions ORDER BY created_at LIMIT $1 OFFSET $2`, limit, offset); err != nil {
+	if err := r.ext(ctx).SelectContext(ctx, &rows, `SELECT id, name, description, created_at, updated_at FROM permissions ORDER BY created_at LIMIT $1 OFFSET $2`, limit, offset); err != nil {
 		return nil, 0, fmt.Errorf("list permissions: %w", err)
 	}
 
@@ -121,7 +125,7 @@ func (r *PermissionRepo) List(ctx context.Context, offset, limit int) ([]domain.
 }
 
 func (r *PermissionRepo) AssignToRole(ctx context.Context, roleID, permID string) error {
-	_, err := r.db.ExecContext(ctx, `INSERT INTO role_permissions (role_id, permission_id) VALUES ($1, $2) ON CONFLICT DO NOTHING`, roleID, permID)
+	_, err := r.ext(ctx).ExecContext(ctx, `INSERT INTO role_permissions (role_id, permission_id) VALUES ($1, $2) ON CONFLICT DO NOTHING`, roleID, permID)
 	if err != nil {
 		return fmt.Errorf("assign permission to role: %w", err)
 	}
@@ -129,7 +133,7 @@ func (r *PermissionRepo) AssignToRole(ctx context.Context, roleID, permID string
 }
 
 func (r *PermissionRepo) RemoveFromRole(ctx context.Context, roleID, permID string) error {
-	_, err := r.db.ExecContext(ctx, `DELETE FROM role_permissions WHERE role_id = $1 AND permission_id = $2`, roleID, permID)
+	_, err := r.ext(ctx).ExecContext(ctx, `DELETE FROM role_permissions WHERE role_id = $1 AND permission_id = $2`, roleID, permID)
 	if err != nil {
 		return fmt.Errorf("remove permission from role: %w", err)
 	}
@@ -137,7 +141,7 @@ func (r *PermissionRepo) RemoveFromRole(ctx context.Context, roleID, permID stri
 }
 
 func (r *PermissionRepo) AssignToUser(ctx context.Context, userID, permID string) error {
-	_, err := r.db.ExecContext(ctx, `INSERT INTO user_permissions (user_id, permission_id) VALUES ($1, $2) ON CONFLICT DO NOTHING`, userID, permID)
+	_, err := r.ext(ctx).ExecContext(ctx, `INSERT INTO user_permissions (user_id, permission_id) VALUES ($1, $2) ON CONFLICT DO NOTHING`, userID, permID)
 	if err != nil {
 		return fmt.Errorf("assign permission to user: %w", err)
 	}
@@ -145,7 +149,7 @@ func (r *PermissionRepo) AssignToUser(ctx context.Context, userID, permID string
 }
 
 func (r *PermissionRepo) RemoveFromUser(ctx context.Context, userID, permID string) error {
-	_, err := r.db.ExecContext(ctx, `DELETE FROM user_permissions WHERE user_id = $1 AND permission_id = $2`, userID, permID)
+	_, err := r.ext(ctx).ExecContext(ctx, `DELETE FROM user_permissions WHERE user_id = $1 AND permission_id = $2`, userID, permID)
 	if err != nil {
 		return fmt.Errorf("remove permission from user: %w", err)
 	}
@@ -168,7 +172,7 @@ WHERE p.id IN (
     SELECT up.permission_id FROM user_permissions up WHERE up.user_id = $1
 )`
 	var names []string
-	if err := r.db.SelectContext(ctx, &names, query, userID); err != nil {
+	if err := r.ext(ctx).SelectContext(ctx, &names, query, userID); err != nil {
 		return nil, fmt.Errorf("resolve permissions for user: %w", err)
 	}
 	return names, nil

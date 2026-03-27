@@ -22,6 +22,10 @@ func NewUserRepo(db *sqlx.DB) *UserRepo {
 	return &UserRepo{db: db}
 }
 
+func (repo *UserRepo) ext(ctx context.Context) dbExt {
+	return extFromCtx(ctx, repo.db)
+}
+
 type userRow struct {
 	ID                  string         `db:"id"`
 	Email               string         `db:"email"`
@@ -133,7 +137,7 @@ RETURNING id, created_at, updated_at`
 		row.TokensRevokedAt = sql.NullTime{Time: *user.TokensRevokedAt, Valid: true}
 	}
 
-	stmt, err := repo.db.PrepareNamedContext(ctx, q)
+	stmt, err := repo.ext(ctx).PrepareNamedContext(ctx, q)
 	if err != nil {
 		return fmt.Errorf("prepare create user: %w", err)
 	}
@@ -171,7 +175,7 @@ FROM users
 WHERE id = $1 AND deleted_at IS NULL`
 
 	var row userRow
-	if err := repo.db.GetContext(ctx, &row, q, id); err != nil {
+	if err := repo.ext(ctx).GetContext(ctx, &row, q, id); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, domain.ErrNotFound
 		}
@@ -192,7 +196,7 @@ FROM users
 WHERE email = $1 AND deleted_at IS NULL`
 
 	var row userRow
-	if err := repo.db.GetContext(ctx, &row, q, email); err != nil {
+	if err := repo.ext(ctx).GetContext(ctx, &row, q, email); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, domain.ErrNotFound
 		}
@@ -251,7 +255,7 @@ WHERE id = :id AND version = :version AND deleted_at IS NULL`
 		row.TokensRevokedAt = sql.NullTime{Time: *user.TokensRevokedAt, Valid: true}
 	}
 
-	stmt, err := repo.db.PrepareNamedContext(ctx, q)
+	stmt, err := repo.ext(ctx).PrepareNamedContext(ctx, q)
 	if err != nil {
 		return fmt.Errorf("prepare update user: %w", err)
 	}
@@ -281,7 +285,7 @@ UPDATE users
 SET status = 'deleted', deleted_at = NOW(), updated_at = NOW()
 WHERE id = $1 AND deleted_at IS NULL`
 
-	result, err := repo.db.ExecContext(ctx, q, id)
+	result, err := repo.ext(ctx).ExecContext(ctx, q, id)
 	if err != nil {
 		return fmt.Errorf("soft delete user: %w", err)
 	}
@@ -300,7 +304,7 @@ WHERE id = $1 AND deleted_at IS NULL`
 func (repo *UserRepo) List(ctx context.Context, offset, limit int) ([]domain.User, int, error) {
 	const countQ = `SELECT COUNT(*) FROM users WHERE deleted_at IS NULL`
 	var total int
-	if err := repo.db.GetContext(ctx, &total, countQ); err != nil {
+	if err := repo.ext(ctx).GetContext(ctx, &total, countQ); err != nil {
 		return nil, 0, fmt.Errorf("count users: %w", err)
 	}
 
@@ -316,7 +320,7 @@ ORDER BY created_at DESC
 LIMIT $1 OFFSET $2`
 
 	var rows []userRow
-	if err := repo.db.SelectContext(ctx, &rows, q, limit, offset); err != nil {
+	if err := repo.ext(ctx).SelectContext(ctx, &rows, q, limit, offset); err != nil {
 		return nil, 0, fmt.Errorf("list users: %w", err)
 	}
 
@@ -339,7 +343,7 @@ FROM users
 WHERE status = 'deleted' AND deleted_at < $1`
 
 	var rows []userRow
-	if err := repo.db.SelectContext(ctx, &rows, q, before); err != nil {
+	if err := repo.ext(ctx).SelectContext(ctx, &rows, q, before); err != nil {
 		return nil, fmt.Errorf("list pending purge users: %w", err)
 	}
 
@@ -354,7 +358,7 @@ WHERE status = 'deleted' AND deleted_at < $1`
 func (repo *UserRepo) HardDelete(ctx context.Context, id string) error {
 	const q = `DELETE FROM users WHERE id = $1`
 
-	if _, err := repo.db.ExecContext(ctx, q, id); err != nil {
+	if _, err := repo.ext(ctx).ExecContext(ctx, q, id); err != nil {
 		return fmt.Errorf("hard delete user: %w", err)
 	}
 

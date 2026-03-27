@@ -21,6 +21,10 @@ func NewRefreshTokenRepo(db *sqlx.DB) *RefreshTokenRepo {
 	return &RefreshTokenRepo{db: db}
 }
 
+func (repo *RefreshTokenRepo) ext(ctx context.Context) dbExt {
+	return extFromCtx(ctx, repo.db)
+}
+
 type refreshTokenRow struct {
 	ID        string         `db:"id"`
 	TokenHash string         `db:"token_hash"`
@@ -74,7 +78,7 @@ RETURNING id, created_at`
 		ExpiresAt: token.ExpiresAt,
 	}
 
-	stmt, err := repo.db.PrepareNamedContext(ctx, q)
+	stmt, err := repo.ext(ctx).PrepareNamedContext(ctx, q)
 	if err != nil {
 		return fmt.Errorf("prepare create refresh token: %w", err)
 	}
@@ -103,7 +107,7 @@ FROM refresh_tokens
 WHERE token_hash = $1 AND revoked_at IS NULL AND expires_at > NOW()`
 
 	var row refreshTokenRow
-	if err := repo.db.GetContext(ctx, &row, q, hash); err != nil {
+	if err := repo.ext(ctx).GetContext(ctx, &row, q, hash); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, domain.ErrNotFound
 		}
@@ -119,7 +123,7 @@ UPDATE refresh_tokens
 SET revoked_at = NOW()
 WHERE id = $1`
 
-	if _, err := repo.db.ExecContext(ctx, q, id); err != nil {
+	if _, err := repo.ext(ctx).ExecContext(ctx, q, id); err != nil {
 		return fmt.Errorf("revoke refresh token by id: %w", err)
 	}
 
@@ -132,7 +136,7 @@ UPDATE refresh_tokens
 SET revoked_at = NOW()
 WHERE family_id = $1 AND revoked_at IS NULL`
 
-	if _, err := repo.db.ExecContext(ctx, q, familyID); err != nil {
+	if _, err := repo.ext(ctx).ExecContext(ctx, q, familyID); err != nil {
 		return fmt.Errorf("revoke refresh tokens by family id: %w", err)
 	}
 
@@ -145,7 +149,7 @@ UPDATE refresh_tokens
 SET revoked_at = NOW()
 WHERE user_id = $1 AND revoked_at IS NULL`
 
-	if _, err := repo.db.ExecContext(ctx, q, userID); err != nil {
+	if _, err := repo.ext(ctx).ExecContext(ctx, q, userID); err != nil {
 		return fmt.Errorf("revoke refresh tokens by user id: %w", err)
 	}
 
@@ -158,7 +162,7 @@ UPDATE refresh_tokens
 SET revoked_at = NOW()
 WHERE client_id = $1 AND revoked_at IS NULL`
 
-	if _, err := repo.db.ExecContext(ctx, q, clientID); err != nil {
+	if _, err := repo.ext(ctx).ExecContext(ctx, q, clientID); err != nil {
 		return fmt.Errorf("revoke refresh tokens by client id: %w", err)
 	}
 
@@ -170,7 +174,7 @@ func (repo *RefreshTokenRepo) DeleteExpired(ctx context.Context) (int64, error) 
 DELETE FROM refresh_tokens
 WHERE expires_at < NOW()`
 
-	result, err := repo.db.ExecContext(ctx, q)
+	result, err := repo.ext(ctx).ExecContext(ctx, q)
 	if err != nil {
 		return 0, fmt.Errorf("delete expired refresh tokens: %w", err)
 	}

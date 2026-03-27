@@ -17,6 +17,7 @@ type TokenUsecase struct {
 	jwt       domain.JWTManager
 	random    domain.RandomGenerator
 	tokenCfg  config.TokenConfig
+	txRunner  domain.TxRunner
 }
 
 func NewTokenUsecase(
@@ -25,6 +26,7 @@ func NewTokenUsecase(
 	jwt domain.JWTManager,
 	random domain.RandomGenerator,
 	tokenCfg config.TokenConfig,
+	txRunner domain.TxRunner,
 ) *TokenUsecase {
 	return &TokenUsecase{
 		tokenRepo: tokenRepo,
@@ -32,6 +34,7 @@ func NewTokenUsecase(
 		jwt:       jwt,
 		random:    random,
 		tokenCfg:  tokenCfg,
+		txRunner:  txRunner,
 	}
 }
 
@@ -111,11 +114,12 @@ func (u *TokenUsecase) RefreshTokens(ctx context.Context, rawToken string) (stri
 		ExpiresAt: time.Now().Add(u.tokenCfg.RefreshTokenExpiry),
 	}
 
-	if err := u.tokenRepo.RevokeByID(ctx, oldToken.ID); err != nil {
-		return "", "", err
-	}
-
-	if err := u.tokenRepo.Create(ctx, newRefreshToken); err != nil {
+	if err := u.txRunner.RunInTx(ctx, func(ctx context.Context) error {
+		if err := u.tokenRepo.RevokeByID(ctx, oldToken.ID); err != nil {
+			return err
+		}
+		return u.tokenRepo.Create(ctx, newRefreshToken)
+	}); err != nil {
 		return "", "", err
 	}
 

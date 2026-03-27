@@ -20,6 +20,7 @@ type OAuthUsecase struct {
 	random       domain.RandomGenerator
 	oauthCfg     config.OAuthConfig
 	tokenCfg     config.TokenConfig
+	txRunner     domain.TxRunner
 }
 
 func NewOAuthUsecase(
@@ -29,6 +30,7 @@ func NewOAuthUsecase(
 	random domain.RandomGenerator,
 	oauthCfg config.OAuthConfig,
 	tokenCfg config.TokenConfig,
+	txRunner domain.TxRunner,
 ) *OAuthUsecase {
 	return &OAuthUsecase{
 		clientRepo:   clientRepo,
@@ -37,6 +39,7 @@ func NewOAuthUsecase(
 		random:       random,
 		oauthCfg:     oauthCfg,
 		tokenCfg:     tokenCfg,
+		txRunner:     txRunner,
 	}
 }
 
@@ -131,12 +134,15 @@ func (u *OAuthUsecase) ExchangeCode(
 		}
 	}
 
-	if err := u.codeRepo.MarkUsed(ctx, authCode.ID); err != nil {
-		return "", "", err
-	}
-
-	accessToken, refreshToken, err := u.tokenUsecase.IssueTokenPair(ctx, authCode.UserID, clientID, authCode.Scopes)
-	if err != nil {
+	var accessToken, refreshToken string
+	if err := u.txRunner.RunInTx(ctx, func(ctx context.Context) error {
+		if err := u.codeRepo.MarkUsed(ctx, authCode.ID); err != nil {
+			return err
+		}
+		var err error
+		accessToken, refreshToken, err = u.tokenUsecase.IssueTokenPair(ctx, authCode.UserID, clientID, authCode.Scopes)
+		return err
+	}); err != nil {
 		return "", "", err
 	}
 
