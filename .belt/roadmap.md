@@ -109,10 +109,10 @@ v0.10 (Security & Ops) ※ v0.9 完了後
 **ゴール**: TOTP セットアップ・検証・無効化、リカバリーコード、ログインフローへの MFA 統合が動作する
 **完動品としての価値**: ユーザーが TOTP を有効化でき、ログイン時に MFA が要求される。リカバリーコードによるフォールバックも機能する
 
-- [ ] MFA ユースケース実装 (`internal/usecase/mfa.go`: TOTP セットアップ/確認/検証/無効化、リカバリーコード生成/再生成/検証、前後 1 ステップ時刻ずれ許容)
-- [ ] MFA ハンドラ実装 (`internal/handler/mfa.go`: `POST /api/v1/mfa/totp/setup`, `confirm`, `DELETE /api/v1/mfa/totp`, `POST /api/v1/mfa/recovery-codes/regenerate`)
-- [ ] ログインフローへの MFA 統合 (`internal/usecase/auth.go` 更新: MFA 有効ユーザーに `mfa_required` 中間レスポンス。`internal/handler/auth.go` 更新: `POST /api/v1/auth/mfa/verify`)
-- [ ] ルーター + main.go ワイヤリング更新 (MFAUsecase, MFAHandler)
+- [x] MFA ユースケース実装 (`internal/usecase/mfa.go`: TOTP セットアップ/確認/検証/無効化、リカバリーコード生成/再生成/検証、前後 1 ステップ時刻ずれ許容)
+- [x] MFA ハンドラ実装 (`internal/handler/mfa.go`: `POST /api/v1/mfa/totp/setup`, `confirm`, `DELETE /api/v1/mfa/totp`, `POST /api/v1/mfa/recovery-codes/regenerate`)
+- [x] ログインフローへの MFA 統合 (`internal/usecase/auth.go` 更新: MFA 有効ユーザーに `mfa_required` 中間レスポンス。`internal/handler/auth.go` 更新: `POST /api/v1/auth/mfa/verify`)
+- [x] ルーター + main.go ワイヤリング更新 (MFAUsecase, MFAHandler)
 
 ---
 

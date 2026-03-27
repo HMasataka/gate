@@ -10,6 +10,7 @@ import (
 	"syscall"
 
 	"github.com/HMasataka/gate/internal/config"
+	"github.com/HMasataka/gate/internal/domain"
 	"github.com/HMasataka/gate/internal/handler"
 	"github.com/HMasataka/gate/internal/infra/crypto"
 	"github.com/HMasataka/gate/internal/infra/mailer"
@@ -72,6 +73,7 @@ func run() error {
 	mail := mailer.NewStdoutMailer()
 	userRepo := postgres.NewUserRepo(db)
 	tokenRepo := postgres.NewRefreshTokenRepo(db)
+	clientRepo := postgres.NewClientRepo(db)
 
 	jwtManager, err := crypto.NewJWTManager(cfg.JWT, cfg.Token)
 	if err != nil {
@@ -82,6 +84,10 @@ func run() error {
 	tokenUsecase := usecase.NewTokenUsecase(tokenRepo, userRepo, jwtManager, random, cfg.Token)
 	authUsecase := usecase.NewAuthUsecase(userRepo, hasher, mail, sessionStore, random, tokenUsecase, cfg.Auth, cfg.Session)
 	mfaUsecase := usecase.NewMFAUsecase(userRepo, random, cfg.MFA)
+	// AuthorizationCodeRepository は未実装のため nil を渡す
+	var codeRepo domain.AuthorizationCodeRepository
+	oauthUsecase := usecase.NewOAuthUsecase(clientRepo, codeRepo, tokenUsecase, random, cfg.OAuth, cfg.Token)
+	clientUsecase := usecase.NewClientUsecase(clientRepo, random, cfg.OAuth)
 
 	// 9. ミドルウェア初期化
 	mw := middleware.New(cfg)
@@ -89,11 +95,12 @@ func run() error {
 	// 10. ハンドラ初期化
 	healthHandler := handler.NewHealthHandler(db, rdb)
 	authHandler := handler.NewAuthHandler(authUsecase)
-	oauthHandler := handler.NewOAuthHandler(tokenUsecase)
+	oauthHandler := handler.NewOAuthHandler(oauthUsecase, tokenUsecase)
 	mfaHandler := handler.NewMFAHandler(mfaUsecase, hasher)
+	adminClientHandler := handler.NewAdminClientHandler(clientUsecase)
 
 	// 11. ルーター構築
-	router := handler.NewRouter(healthHandler, authHandler, oauthHandler, mfaHandler, jwtManager, mw)
+	router := handler.NewRouter(healthHandler, authHandler, oauthHandler, mfaHandler, adminClientHandler, jwtManager, mw)
 
 	// 12. HTTP サーバー起動
 	srv := &http.Server{

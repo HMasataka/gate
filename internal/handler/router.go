@@ -15,6 +15,7 @@ func NewRouter(
 	authHandler *AuthHandler,
 	oauthHandler *OAuthHandler,
 	mfaHandler *MFAHandler,
+	adminClientHandler *AdminClientHandler,
 	jwtManager domain.JWTManager,
 	mw *middleware.Middleware,
 ) chi.Router {
@@ -34,6 +35,11 @@ func NewRouter(
 	// Prometheus メトリクス
 	r.Handle("/metrics", promhttp.Handler())
 
+	// JWKS エンドポイント
+	r.Get("/.well-known/jwks.json", func(w http.ResponseWriter, r *http.Request) {
+		JSON(w, http.StatusOK, jwtManager.JWKS())
+	})
+
 	// API v1
 	r.Route("/api/v1", func(r chi.Router) {
 		r.Route("/auth", func(r chi.Router) {
@@ -52,10 +58,12 @@ func NewRouter(
 			})
 		})
 
-		// OAuth 2.0 トークンエンドポイント
+		// OAuth 2.0 エンドポイント
 		r.Route("/oauth", func(r chi.Router) {
+			r.Get("/authorize", oauthHandler.Authorize)
 			r.Post("/token", oauthHandler.Token)
 			r.Post("/revoke", oauthHandler.Revoke)
+			r.Post("/introspect", oauthHandler.Introspect)
 		})
 
 		// MFA エンドポイント (JWT 認証必須)
@@ -65,6 +73,22 @@ func NewRouter(
 			r.Post("/totp/confirm", mfaHandler.ConfirmTOTP)
 			r.Delete("/totp", mfaHandler.DisableTOTP)
 			r.Post("/recovery-codes/regenerate", mfaHandler.RegenerateRecoveryCodes)
+		})
+
+		// 管理者エンドポイント (JWT 認証必須)
+		r.Route("/admin", func(r chi.Router) {
+			r.Use(middleware.JWTAuth(jwtManager))
+
+			r.Route("/clients", func(r chi.Router) {
+				r.Get("/", adminClientHandler.List)
+				r.Post("/", adminClientHandler.Create)
+				r.Route("/{id}", func(r chi.Router) {
+					r.Get("/", adminClientHandler.Get)
+					r.Put("/", adminClientHandler.Update)
+					r.Delete("/", adminClientHandler.Delete)
+					r.Post("/rotate-secret", adminClientHandler.RotateSecret)
+				})
+			})
 		})
 	})
 
