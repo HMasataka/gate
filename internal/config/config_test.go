@@ -162,9 +162,9 @@ func TestValidate_CORSWildcard(t *testing.T) {
 func TestValidate_MultipleErrors(t *testing.T) {
 	cfg := ForTest()
 	// Introduce multiple invalid values
-	cfg.Server.Port = 0          // invalid: below 1
-	cfg.JWT.Algorithm = "HS256"  // invalid: not ES256 or RS256
-	cfg.Log.Level = "VERBOSE"    // invalid: not DEBUG/INFO/WARN/ERROR
+	cfg.Server.Port = 0         // invalid: below 1
+	cfg.JWT.Algorithm = "HS256" // invalid: not ES256 or RS256
+	cfg.Log.Level = "VERBOSE"   // invalid: not DEBUG/INFO/WARN/ERROR
 
 	err := cfg.Validate()
 	if err == nil {

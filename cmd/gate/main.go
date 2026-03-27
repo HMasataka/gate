@@ -22,7 +22,6 @@ import (
 	"github.com/HMasataka/gate/internal/usecase"
 )
 
-
 func main() {
 	if err := run(); err != nil {
 		slog.Error("application error", "error", err)

@@ -126,22 +126,22 @@ type MetricsConfig struct {
 }
 
 type SocialConfig struct {
-	GoogleClientID       string `env:"SOCIAL_GOOGLE_CLIENT_ID"       envDefault:""`
-	GoogleClientSecret   string `env:"SOCIAL_GOOGLE_CLIENT_SECRET"   envDefault:""`
-	GoogleRedirectURI    string `env:"SOCIAL_GOOGLE_REDIRECT_URI"    envDefault:""`
-	GitHubClientID       string `env:"SOCIAL_GITHUB_CLIENT_ID"       envDefault:""`
-	GitHubClientSecret   string `env:"SOCIAL_GITHUB_CLIENT_SECRET"   envDefault:""`
-	GitHubRedirectURI    string `env:"SOCIAL_GITHUB_REDIRECT_URI"    envDefault:""`
+	GoogleClientID     string `env:"SOCIAL_GOOGLE_CLIENT_ID"       envDefault:""`
+	GoogleClientSecret string `env:"SOCIAL_GOOGLE_CLIENT_SECRET"   envDefault:""`
+	GoogleRedirectURI  string `env:"SOCIAL_GOOGLE_REDIRECT_URI"    envDefault:""`
+	GitHubClientID     string `env:"SOCIAL_GITHUB_CLIENT_ID"       envDefault:""`
+	GitHubClientSecret string `env:"SOCIAL_GITHUB_CLIENT_SECRET"   envDefault:""`
+	GitHubRedirectURI  string `env:"SOCIAL_GITHUB_REDIRECT_URI"    envDefault:""`
 }
 
 type RateLimitConfig struct {
-	AuthLimit     int           `env:"RATE_LIMIT_AUTH"          envDefault:"10"`
-	AuthWindow    time.Duration `env:"RATE_LIMIT_AUTH_WINDOW"   envDefault:"1m"`
-	PasswordLimit int           `env:"RATE_LIMIT_PASSWORD"      envDefault:"3"`
+	AuthLimit      int           `env:"RATE_LIMIT_AUTH"          envDefault:"10"`
+	AuthWindow     time.Duration `env:"RATE_LIMIT_AUTH_WINDOW"   envDefault:"1m"`
+	PasswordLimit  int           `env:"RATE_LIMIT_PASSWORD"      envDefault:"3"`
 	PasswordWindow time.Duration `env:"RATE_LIMIT_PASSWORD_WINDOW" envDefault:"1m"`
-	TokenLimit    int           `env:"RATE_LIMIT_TOKEN"         envDefault:"20"`
-	TokenWindow   time.Duration `env:"RATE_LIMIT_TOKEN_WINDOW"  envDefault:"1m"`
-	HTTPSRedirect bool          `env:"HTTPS_REDIRECT"           envDefault:"false"`
+	TokenLimit     int           `env:"RATE_LIMIT_TOKEN"         envDefault:"20"`
+	TokenWindow    time.Duration `env:"RATE_LIMIT_TOKEN_WINDOW"  envDefault:"1m"`
+	HTTPSRedirect  bool          `env:"HTTPS_REDIRECT"           envDefault:"false"`
 }
 
 // Load parses configuration from environment variables.

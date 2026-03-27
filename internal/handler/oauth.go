@@ -77,7 +77,7 @@ func (h *OAuthHandler) Authorize(w http.ResponseWriter, r *http.Request) {
 }
 
 type oauthTokenRequest struct {
-	GrantType    string `json:"grant_type"`
+	GrantType string `json:"grant_type"`
 	// authorization_code
 	Code         string `json:"code"`
 	RedirectURI  string `json:"redirect_uri"`

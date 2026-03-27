@@ -79,16 +79,16 @@ func (u *AuthUsecase) Register(ctx context.Context, email, password string) (*do
 	now := time.Now()
 
 	user := &domain.User{
-		ID:               u.random.GenerateUUID(),
-		Email:            email,
-		PasswordHash:     hash,
-		Status:           domain.UserStatusUnverified,
-		EmailVerified:    false,
-		EmailVerifyToken: token,
+		ID:                u.random.GenerateUUID(),
+		Email:             email,
+		PasswordHash:      hash,
+		Status:            domain.UserStatusUnverified,
+		EmailVerified:     false,
+		EmailVerifyToken:  token,
 		EmailVerifyExpiry: &expiry,
-		Version:          1,
-		CreatedAt:        now,
-		UpdatedAt:        now,
+		Version:           1,
+		CreatedAt:         now,
+		UpdatedAt:         now,
 	}
 
 	if err := u.userRepo.Create(ctx, user); err != nil {

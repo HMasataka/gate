@@ -11,10 +11,10 @@ import (
 )
 
 const (
-	githubAuthorizeURL   = "https://github.com/login/oauth/authorize"
-	githubTokenURL       = "https://github.com/login/oauth/access_token"
-	githubUserURL        = "https://api.github.com/user"
-	githubUserEmailsURL  = "https://api.github.com/user/emails"
+	githubAuthorizeURL  = "https://github.com/login/oauth/authorize"
+	githubTokenURL      = "https://github.com/login/oauth/access_token"
+	githubUserURL       = "https://api.github.com/user"
+	githubUserEmailsURL = "https://api.github.com/user/emails"
 )
 
 // GitHubProvider implements the SocialProvider interface for GitHub OAuth2.

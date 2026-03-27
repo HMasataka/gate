@@ -23,7 +23,7 @@ func NewSessionStore(client *redis.Client, cfg config.SessionConfig) *SessionSto
 	}
 }
 
-func sessionKey(id string) string        { return "session:" + id }
+func sessionKey(id string) string          { return "session:" + id }
 func userSessionsKey(userID string) string { return "user:sessions:" + userID }
 
 func (s *SessionStore) Create(ctx context.Context, session *domain.Session) error {

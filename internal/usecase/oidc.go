@@ -41,7 +41,7 @@ func (u *OIDCUsecase) UserInfo(ctx context.Context, userID string) (map[string]a
 func (u *OIDCUsecase) Discovery() map[string]any {
 	return map[string]any{
 		"issuer":                                u.serverURL,
-		"authorization_endpoint":               u.serverURL + "/api/v1/oauth/authorize",
+		"authorization_endpoint":                u.serverURL + "/api/v1/oauth/authorize",
 		"token_endpoint":                        u.serverURL + "/oauth/token",
 		"userinfo_endpoint":                     u.serverURL + "/oauth/userinfo",
 		"jwks_uri":                              u.serverURL + "/.well-known/jwks.json",

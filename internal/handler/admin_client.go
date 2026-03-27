@@ -15,11 +15,11 @@ func NewAdminClientHandler(client *usecase.ClientUsecase) *AdminClientHandler {
 }
 
 type createClientRequest struct {
-	Name         string   `json:"name"`
-	ClientType   string   `json:"client_type"`
-	RedirectURIs []string `json:"redirect_uris"`
+	Name          string   `json:"name"`
+	ClientType    string   `json:"client_type"`
+	RedirectURIs  []string `json:"redirect_uris"`
 	AllowedScopes []string `json:"allowed_scopes"`
-	GrantTypes   []string `json:"grant_types"`
+	GrantTypes    []string `json:"grant_types"`
 }
 
 // Create handles POST /api/v1/admin/clients

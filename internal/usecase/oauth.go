@@ -200,4 +200,3 @@ func splitScope(scope string) []string {
 
 	return parts
 }
-
