@@ -68,8 +68,7 @@ func initApp(ctx context.Context, cfg *config.Config) (*app, error) {
 	tokenUsecase := usecase.NewTokenUsecase(tokenRepo, userRepo, jwtManager, random, cfg.Token, txManager)
 	authUsecase := usecase.NewAuthUsecase(userRepo, hasher, mail, sessionStore, random, tokenUsecase, cfg.Auth, cfg.Session)
 	mfaUsecase := usecase.NewMFAUsecase(userRepo, random, cfg.MFA)
-	// AuthorizationCodeRepository は未実装のため nil を渡す
-	var codeRepo domain.AuthorizationCodeRepository
+	codeRepo := postgres.NewAuthorizationCodeRepo(db)
 	oauthUsecase := usecase.NewOAuthUsecase(clientRepo, codeRepo, tokenUsecase, random, cfg.OAuth, cfg.Token, txManager)
 	clientUsecase := usecase.NewClientUsecase(clientRepo, random, cfg.OAuth)
 	permCache := redisclient.NewPermissionCache(rdb, permRepo, 5*time.Minute)
