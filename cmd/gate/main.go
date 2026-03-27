@@ -1,7 +1,134 @@
 package main
 
-import "fmt"
+import (
+	"context"
+	"fmt"
+	"log/slog"
+	"net/http"
+	"os"
+	"os/signal"
+	"syscall"
+
+	"github.com/HMasataka/gate/internal/config"
+	"github.com/HMasataka/gate/internal/handler"
+	"github.com/HMasataka/gate/internal/infra/postgres"
+	redisclient "github.com/HMasataka/gate/internal/infra/redis"
+	"github.com/HMasataka/gate/internal/middleware"
+)
 
 func main() {
-	fmt.Println("Hello, World!")
+	if err := run(); err != nil {
+		slog.Error("application error", "error", err)
+		os.Exit(1)
+	}
+}
+
+func run() error {
+	// 1. 設定読み込み
+	cfg, err := config.Load()
+	if err != nil {
+		return fmt.Errorf("load config: %w", err)
+	}
+
+	// 2. 設定バリデーション
+	if err := cfg.Validate(); err != nil {
+		return fmt.Errorf("validate config: %w", err)
+	}
+
+	// 3. slog セットアップ
+	setupLogger(cfg.Log)
+
+	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
+	defer stop()
+
+	// 4. DB 接続
+	db, err := postgres.NewDB(ctx, cfg.Database)
+	if err != nil {
+		return fmt.Errorf("connect database: %w", err)
+	}
+	defer db.Close()
+
+	// 5. マイグレーション実行
+	if err := postgres.RunMigrations(ctx, db, cfg.Database.MigrateTimeout); err != nil {
+		return fmt.Errorf("run migrations: %w", err)
+	}
+	slog.Info("database migrations completed")
+
+	// 6. Redis 接続
+	rdb, err := redisclient.NewClient(ctx, cfg.Redis)
+	if err != nil {
+		return fmt.Errorf("connect redis: %w", err)
+	}
+	defer rdb.Close()
+
+	// 7. ミドルウェア初期化
+	mw := middleware.New(cfg)
+
+	// 8. ハンドラ初期化
+	healthHandler := handler.NewHealthHandler(db, rdb)
+
+	// 9. ルーター構築
+	router := handler.NewRouter(healthHandler, mw)
+
+	// 10. HTTP サーバー起動
+	srv := &http.Server{
+		Addr:              fmt.Sprintf(":%d", cfg.Server.Port),
+		Handler:           router,
+		ReadTimeout:       cfg.Server.ReadTimeout,
+		WriteTimeout:      cfg.Server.WriteTimeout,
+		IdleTimeout:       cfg.Server.IdleTimeout,
+		ReadHeaderTimeout: cfg.Server.ReadHeaderTimeout,
+	}
+
+	errCh := make(chan error, 1)
+	go func() {
+		slog.Info("starting server", "port", cfg.Server.Port)
+		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			errCh <- err
+		}
+		close(errCh)
+	}()
+
+	// 11. グレースフルシャットダウン
+	select {
+	case err := <-errCh:
+		return fmt.Errorf("server error: %w", err)
+	case <-ctx.Done():
+		slog.Info("shutting down server")
+	}
+
+	shutdownCtx, cancel := context.WithTimeout(context.Background(), cfg.Server.ShutdownTimeout)
+	defer cancel()
+
+	if err := srv.Shutdown(shutdownCtx); err != nil {
+		return fmt.Errorf("server shutdown: %w", err)
+	}
+
+	slog.Info("server stopped gracefully")
+	return nil
+}
+
+func setupLogger(cfg config.LogConfig) {
+	var level slog.Level
+	switch cfg.Level {
+	case "DEBUG":
+		level = slog.LevelDebug
+	case "WARN":
+		level = slog.LevelWarn
+	case "ERROR":
+		level = slog.LevelError
+	default:
+		level = slog.LevelInfo
+	}
+
+	opts := &slog.HandlerOptions{Level: level}
+
+	var h slog.Handler
+	if cfg.Format == "text" {
+		h = slog.NewTextHandler(os.Stdout, opts)
+	} else {
+		h = slog.NewJSONHandler(os.Stdout, opts)
+	}
+
+	slog.SetDefault(slog.New(h))
 }
