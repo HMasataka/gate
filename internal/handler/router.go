@@ -14,6 +14,7 @@ func NewRouter(
 	healthHandler *HealthHandler,
 	authHandler *AuthHandler,
 	oauthHandler *OAuthHandler,
+	mfaHandler *MFAHandler,
 	jwtManager domain.JWTManager,
 	mw *middleware.Middleware,
 ) chi.Router {
@@ -55,6 +56,15 @@ func NewRouter(
 		r.Route("/oauth", func(r chi.Router) {
 			r.Post("/token", oauthHandler.Token)
 			r.Post("/revoke", oauthHandler.Revoke)
+		})
+
+		// MFA エンドポイント (JWT 認証必須)
+		r.Route("/mfa", func(r chi.Router) {
+			r.Use(middleware.JWTAuth(jwtManager))
+			r.Post("/totp/setup", mfaHandler.SetupTOTP)
+			r.Post("/totp/confirm", mfaHandler.ConfirmTOTP)
+			r.Delete("/totp", mfaHandler.DisableTOTP)
+			r.Post("/recovery-codes/regenerate", mfaHandler.RegenerateRecoveryCodes)
 		})
 	})
 

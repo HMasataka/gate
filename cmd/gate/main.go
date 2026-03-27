@@ -81,6 +81,7 @@ func run() error {
 	// 8. ユースケース初期化
 	tokenUsecase := usecase.NewTokenUsecase(tokenRepo, userRepo, jwtManager, random, cfg.Token)
 	authUsecase := usecase.NewAuthUsecase(userRepo, hasher, mail, sessionStore, random, tokenUsecase, cfg.Auth, cfg.Session)
+	mfaUsecase := usecase.NewMFAUsecase(userRepo, random, cfg.MFA)
 
 	// 9. ミドルウェア初期化
 	mw := middleware.New(cfg)
@@ -89,9 +90,10 @@ func run() error {
 	healthHandler := handler.NewHealthHandler(db, rdb)
 	authHandler := handler.NewAuthHandler(authUsecase)
 	oauthHandler := handler.NewOAuthHandler(tokenUsecase)
+	mfaHandler := handler.NewMFAHandler(mfaUsecase, hasher)
 
 	// 11. ルーター構築
-	router := handler.NewRouter(healthHandler, authHandler, oauthHandler, jwtManager, mw)
+	router := handler.NewRouter(healthHandler, authHandler, oauthHandler, mfaHandler, jwtManager, mw)
 
 	// 12. HTTP サーバー起動
 	srv := &http.Server{
