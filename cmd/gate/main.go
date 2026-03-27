@@ -88,6 +88,8 @@ func run() error {
 	var codeRepo domain.AuthorizationCodeRepository
 	oauthUsecase := usecase.NewOAuthUsecase(clientRepo, codeRepo, tokenUsecase, random, cfg.OAuth, cfg.Token)
 	clientUsecase := usecase.NewClientUsecase(clientRepo, random, cfg.OAuth)
+	serverURL := fmt.Sprintf("http://localhost:%d", cfg.Server.Port)
+	oidcUsecase := usecase.NewOIDCUsecase(userRepo, jwtManager, serverURL)
 
 	// 9. ミドルウェア初期化
 	mw := middleware.New(cfg)
@@ -98,9 +100,10 @@ func run() error {
 	oauthHandler := handler.NewOAuthHandler(oauthUsecase, tokenUsecase)
 	mfaHandler := handler.NewMFAHandler(mfaUsecase, hasher)
 	adminClientHandler := handler.NewAdminClientHandler(clientUsecase)
+	oidcHandler := handler.NewOIDCHandler(oidcUsecase)
 
 	// 11. ルーター構築
-	router := handler.NewRouter(healthHandler, authHandler, oauthHandler, mfaHandler, adminClientHandler, jwtManager, mw)
+	router := handler.NewRouter(healthHandler, authHandler, oauthHandler, mfaHandler, adminClientHandler, oidcHandler, jwtManager, mw)
 
 	// 12. HTTP サーバー起動
 	srv := &http.Server{

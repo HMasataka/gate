@@ -16,6 +16,7 @@ func NewRouter(
 	oauthHandler *OAuthHandler,
 	mfaHandler *MFAHandler,
 	adminClientHandler *AdminClientHandler,
+	oidcHandler *OIDCHandler,
 	jwtManager domain.JWTManager,
 	mw *middleware.Middleware,
 ) chi.Router {
@@ -38,6 +39,15 @@ func NewRouter(
 	// JWKS エンドポイント
 	r.Get("/.well-known/jwks.json", func(w http.ResponseWriter, r *http.Request) {
 		JSON(w, http.StatusOK, jwtManager.JWKS())
+	})
+
+	// OIDC Discovery エンドポイント
+	r.Get("/.well-known/openid-configuration", oidcHandler.Discovery)
+
+	// OIDC UserInfo エンドポイント (JWT 認証必須)
+	r.Group(func(r chi.Router) {
+		r.Use(middleware.JWTAuth(jwtManager))
+		r.Get("/oauth/userinfo", oidcHandler.UserInfo)
 	})
 
 	// API v1
