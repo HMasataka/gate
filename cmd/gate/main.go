@@ -8,6 +8,7 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
 
 	"github.com/HMasataka/gate/internal/config"
 	"github.com/HMasataka/gate/internal/domain"
@@ -74,6 +75,8 @@ func run() error {
 	userRepo := postgres.NewUserRepo(db)
 	tokenRepo := postgres.NewRefreshTokenRepo(db)
 	clientRepo := postgres.NewClientRepo(db)
+	roleRepo := postgres.NewRoleRepo(db)
+	permRepo := postgres.NewPermissionRepo(db)
 
 	jwtManager, err := crypto.NewJWTManager(cfg.JWT, cfg.Token)
 	if err != nil {
@@ -88,6 +91,9 @@ func run() error {
 	var codeRepo domain.AuthorizationCodeRepository
 	oauthUsecase := usecase.NewOAuthUsecase(clientRepo, codeRepo, tokenUsecase, random, cfg.OAuth, cfg.Token)
 	clientUsecase := usecase.NewClientUsecase(clientRepo, random, cfg.OAuth)
+	permCache := redisclient.NewPermissionCache(rdb, permRepo, 5*time.Minute)
+	roleUsecase := usecase.NewRoleUsecase(roleRepo, permRepo, permCache, random)
+	permUsecase := usecase.NewPermissionUsecase(permRepo, permCache, random)
 	serverURL := fmt.Sprintf("http://localhost:%d", cfg.Server.Port)
 	oidcUsecase := usecase.NewOIDCUsecase(userRepo, jwtManager, serverURL)
 
@@ -100,10 +106,11 @@ func run() error {
 	oauthHandler := handler.NewOAuthHandler(oauthUsecase, tokenUsecase)
 	mfaHandler := handler.NewMFAHandler(mfaUsecase, hasher)
 	adminClientHandler := handler.NewAdminClientHandler(clientUsecase)
+	adminRoleHandler := handler.NewAdminRoleHandler(roleUsecase, permUsecase)
 	oidcHandler := handler.NewOIDCHandler(oidcUsecase)
 
 	// 11. ルーター構築
-	router := handler.NewRouter(healthHandler, authHandler, oauthHandler, mfaHandler, adminClientHandler, oidcHandler, jwtManager, mw)
+	router := handler.NewRouter(healthHandler, authHandler, oauthHandler, mfaHandler, adminClientHandler, adminRoleHandler, oidcHandler, jwtManager, mw)
 
 	// 12. HTTP サーバー起動
 	srv := &http.Server{

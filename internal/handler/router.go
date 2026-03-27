@@ -16,6 +16,7 @@ func NewRouter(
 	oauthHandler *OAuthHandler,
 	mfaHandler *MFAHandler,
 	adminClientHandler *AdminClientHandler,
+	adminRoleHandler *AdminRoleHandler,
 	oidcHandler *OIDCHandler,
 	jwtManager domain.JWTManager,
 	mw *middleware.Middleware,
@@ -97,6 +98,30 @@ func NewRouter(
 					r.Put("/", adminClientHandler.Update)
 					r.Delete("/", adminClientHandler.Delete)
 					r.Post("/rotate-secret", adminClientHandler.RotateSecret)
+				})
+			})
+
+			r.Route("/roles", func(r chi.Router) {
+				r.Get("/", adminRoleHandler.ListRoles)
+				r.Post("/", adminRoleHandler.CreateRole)
+				r.Route("/{id}", func(r chi.Router) {
+					r.Get("/", adminRoleHandler.GetRole)
+					r.Put("/", adminRoleHandler.UpdateRole)
+					r.Delete("/", adminRoleHandler.DeleteRole)
+					r.Post("/users/{userID}", adminRoleHandler.AssignRoleToUser)
+					r.Delete("/users/{userID}", adminRoleHandler.RemoveRoleFromUser)
+					r.Post("/permissions/{permID}", adminRoleHandler.AssignPermissionToRole)
+					r.Delete("/permissions/{permID}", adminRoleHandler.RemovePermissionFromRole)
+				})
+			})
+
+			r.Route("/permissions", func(r chi.Router) {
+				r.Get("/", adminRoleHandler.ListPermissions)
+				r.Post("/", adminRoleHandler.CreatePermission)
+				r.Route("/{id}", func(r chi.Router) {
+					r.Get("/", adminRoleHandler.GetPermission)
+					r.Put("/", adminRoleHandler.UpdatePermission)
+					r.Delete("/", adminRoleHandler.DeletePermission)
 				})
 			})
 		})
