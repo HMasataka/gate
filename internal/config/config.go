@@ -24,6 +24,7 @@ type Config struct {
 	Mailer   MailerConfig
 	Log      LogConfig
 	Metrics  MetricsConfig
+	Social   SocialConfig
 }
 
 type ServerConfig struct {
@@ -120,6 +121,15 @@ type LogConfig struct {
 
 type MetricsConfig struct {
 	Enabled bool `env:"METRICS_ENABLED" envDefault:"true"`
+}
+
+type SocialConfig struct {
+	GoogleClientID       string `env:"SOCIAL_GOOGLE_CLIENT_ID"       envDefault:""`
+	GoogleClientSecret   string `env:"SOCIAL_GOOGLE_CLIENT_SECRET"   envDefault:""`
+	GoogleRedirectURI    string `env:"SOCIAL_GOOGLE_REDIRECT_URI"    envDefault:""`
+	GitHubClientID       string `env:"SOCIAL_GITHUB_CLIENT_ID"       envDefault:""`
+	GitHubClientSecret   string `env:"SOCIAL_GITHUB_CLIENT_SECRET"   envDefault:""`
+	GitHubRedirectURI    string `env:"SOCIAL_GITHUB_REDIRECT_URI"    envDefault:""`
 }
 
 // Load parses configuration from environment variables.

@@ -18,6 +18,7 @@ func NewRouter(
 	adminClientHandler *AdminClientHandler,
 	adminRoleHandler *AdminRoleHandler,
 	oidcHandler *OIDCHandler,
+	socialHandler *SocialHandler,
 	jwtManager domain.JWTManager,
 	mw *middleware.Middleware,
 ) chi.Router {
@@ -67,6 +68,10 @@ func NewRouter(
 				r.Use(middleware.JWTAuth(jwtManager))
 				r.Post("/change-password", authHandler.ChangePassword)
 			})
+
+			// ソーシャルログインエンドポイント
+			r.Get("/social/{provider}/authorize", socialHandler.Authorize)
+			r.Get("/social/{provider}/callback", socialHandler.Callback)
 		})
 
 		// OAuth 2.0 エンドポイント

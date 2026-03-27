@@ -17,6 +17,7 @@ import (
 	"github.com/HMasataka/gate/internal/infra/mailer"
 	"github.com/HMasataka/gate/internal/infra/postgres"
 	redisclient "github.com/HMasataka/gate/internal/infra/redis"
+	"github.com/HMasataka/gate/internal/infra/social"
 	"github.com/HMasataka/gate/internal/middleware"
 	"github.com/HMasataka/gate/internal/usecase"
 )
@@ -77,6 +78,7 @@ func run() error {
 	clientRepo := postgres.NewClientRepo(db)
 	roleRepo := postgres.NewRoleRepo(db)
 	permRepo := postgres.NewPermissionRepo(db)
+	socialRepo := postgres.NewSocialConnectionRepo(db)
 
 	jwtManager, err := crypto.NewJWTManager(cfg.JWT, cfg.Token)
 	if err != nil {
@@ -97,6 +99,18 @@ func run() error {
 	serverURL := fmt.Sprintf("http://localhost:%d", cfg.Server.Port)
 	oidcUsecase := usecase.NewOIDCUsecase(userRepo, jwtManager, serverURL)
 
+	// ソーシャルプロバイダ設定
+	socialProviders := map[string]usecase.SocialProvider{}
+	if cfg.Social.GoogleClientID != "" {
+		googleProvider := social.NewGoogleProvider(cfg.Social.GoogleClientID, cfg.Social.GoogleClientSecret, cfg.Social.GoogleRedirectURI)
+		socialProviders["google"] = social.NewProviderAdapter(googleProvider)
+	}
+	if cfg.Social.GitHubClientID != "" {
+		githubProvider := social.NewGitHubProvider(cfg.Social.GitHubClientID, cfg.Social.GitHubClientSecret, cfg.Social.GitHubRedirectURI)
+		socialProviders["github"] = social.NewProviderAdapter(githubProvider)
+	}
+	socialUsecase := usecase.NewSocialUsecase(socialRepo, userRepo, sessionStore, tokenUsecase, random, socialProviders, cfg.Session)
+
 	// 9. ミドルウェア初期化
 	mw := middleware.New(cfg)
 
@@ -108,9 +122,10 @@ func run() error {
 	adminClientHandler := handler.NewAdminClientHandler(clientUsecase)
 	adminRoleHandler := handler.NewAdminRoleHandler(roleUsecase, permUsecase)
 	oidcHandler := handler.NewOIDCHandler(oidcUsecase)
+	socialHandler := handler.NewSocialHandler(socialUsecase)
 
 	// 11. ルーター構築
-	router := handler.NewRouter(healthHandler, authHandler, oauthHandler, mfaHandler, adminClientHandler, adminRoleHandler, oidcHandler, jwtManager, mw)
+	router := handler.NewRouter(healthHandler, authHandler, oauthHandler, mfaHandler, adminClientHandler, adminRoleHandler, oidcHandler, socialHandler, jwtManager, mw)
 
 	// 12. HTTP サーバー起動
 	srv := &http.Server{
