@@ -12,13 +12,6 @@ import (
 
 	"github.com/HMasataka/gate/internal/config"
 	"github.com/HMasataka/gate/internal/domain"
-	"github.com/HMasataka/gate/internal/handler"
-	"github.com/HMasataka/gate/internal/infra/crypto"
-	"github.com/HMasataka/gate/internal/infra/mailer"
-	"github.com/HMasataka/gate/internal/infra/postgres"
-	redisclient "github.com/HMasataka/gate/internal/infra/redis"
-	"github.com/HMasataka/gate/internal/infra/social"
-	"github.com/HMasataka/gate/internal/middleware"
 	"github.com/HMasataka/gate/internal/usecase"
 )
 
@@ -79,99 +72,20 @@ func run() error {
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer stop()
 
-	// 4. DB 接続
-	db, err := postgres.NewDB(ctx, cfg.Database)
+	// 4. アプリケーション初期化 (DI)
+	a, err := initApp(ctx, cfg)
 	if err != nil {
-		return fmt.Errorf("connect database: %w", err)
+		return err
 	}
-	defer db.Close()
+	defer a.cleanup()
 
-	// 5. マイグレーション実行
-	if err := postgres.RunMigrations(ctx, db, cfg.Database.MigrateTimeout); err != nil {
-		return fmt.Errorf("run migrations: %w", err)
-	}
-	slog.Info("database migrations completed")
+	// 5. バックグラウンドジョブ起動
+	startBackgroundJobs(ctx, a.auditUsecase, a.userRepo, cfg.Auth.AccountPurgeDays)
 
-	// 6. Redis 接続
-	rdb, err := redisclient.NewClient(ctx, cfg.Redis)
-	if err != nil {
-		return fmt.Errorf("connect redis: %w", err)
-	}
-	defer rdb.Close()
-
-	// 7. インフラ層初期化
-	hasher := crypto.NewArgon2Hasher(cfg.Argon2)
-	random := &crypto.SecureRandom{}
-	sessionStore := redisclient.NewSessionStore(rdb, cfg.Session)
-	rateLimiter := redisclient.NewRateLimiterStore(rdb)
-	_ = crypto.NewJTIStore(rdb) // JTI replay prevention store (integration point for future use)
-	mail := mailer.NewStdoutMailer()
-	userRepo := postgres.NewUserRepo(db)
-	tokenRepo := postgres.NewRefreshTokenRepo(db)
-	clientRepo := postgres.NewClientRepo(db)
-	roleRepo := postgres.NewRoleRepo(db)
-	permRepo := postgres.NewPermissionRepo(db)
-	socialRepo := postgres.NewSocialConnectionRepo(db)
-
-	jwtManager, err := crypto.NewJWTManager(cfg.JWT, cfg.Token)
-	if err != nil {
-		return fmt.Errorf("create jwt manager: %w", err)
-	}
-
-	// 8. ユースケース初期化
-	txManager := postgres.NewTxManager(db)
-	tokenUsecase := usecase.NewTokenUsecase(tokenRepo, userRepo, jwtManager, random, cfg.Token, txManager)
-	authUsecase := usecase.NewAuthUsecase(userRepo, hasher, mail, sessionStore, random, tokenUsecase, cfg.Auth, cfg.Session)
-	mfaUsecase := usecase.NewMFAUsecase(userRepo, random, cfg.MFA)
-	// AuthorizationCodeRepository は未実装のため nil を渡す
-	var codeRepo domain.AuthorizationCodeRepository
-	oauthUsecase := usecase.NewOAuthUsecase(clientRepo, codeRepo, tokenUsecase, random, cfg.OAuth, cfg.Token, txManager)
-	clientUsecase := usecase.NewClientUsecase(clientRepo, random, cfg.OAuth)
-	permCache := redisclient.NewPermissionCache(rdb, permRepo, 5*time.Minute)
-	roleUsecase := usecase.NewRoleUsecase(roleRepo, permRepo, permCache, random)
-	permUsecase := usecase.NewPermissionUsecase(permRepo, permCache, random)
-	serverURL := fmt.Sprintf("http://localhost:%d", cfg.Server.Port)
-	oidcUsecase := usecase.NewOIDCUsecase(userRepo, jwtManager, serverURL)
-
-	// ソーシャルプロバイダ設定
-	socialProviders := map[string]usecase.SocialProvider{}
-	if cfg.Social.GoogleClientID != "" {
-		googleProvider := social.NewGoogleProvider(cfg.Social.GoogleClientID, cfg.Social.GoogleClientSecret, cfg.Social.GoogleRedirectURI)
-		socialProviders["google"] = social.NewProviderAdapter(googleProvider)
-	}
-	if cfg.Social.GitHubClientID != "" {
-		githubProvider := social.NewGitHubProvider(cfg.Social.GitHubClientID, cfg.Social.GitHubClientSecret, cfg.Social.GitHubRedirectURI)
-		socialProviders["github"] = social.NewProviderAdapter(githubProvider)
-	}
-	socialUsecase := usecase.NewSocialUsecase(socialRepo, userRepo, sessionStore, tokenUsecase, random, socialProviders, cfg.Session, txManager)
-	auditRepo := postgres.NewAuditLogRepo(db)
-	auditUsecase := usecase.NewAuditUsecase(auditRepo, random, cfg.Auth.AuditRetentionDays)
-	userUsecase := usecase.NewUserUsecase(userRepo, sessionStore, tokenUsecase, random)
-
-	// 9. ミドルウェア初期化
-	mw := middleware.New(cfg)
-
-	// 10. ハンドラ初期化
-	healthHandler := handler.NewHealthHandler(db, rdb)
-	authHandler := handler.NewAuthHandler(authUsecase)
-	oauthHandler := handler.NewOAuthHandler(oauthUsecase, tokenUsecase)
-	mfaHandler := handler.NewMFAHandler(mfaUsecase, hasher)
-	adminClientHandler := handler.NewAdminClientHandler(clientUsecase)
-	adminRoleHandler := handler.NewAdminRoleHandler(roleUsecase, permUsecase)
-	adminUserHandler := handler.NewAdminUserHandler(userUsecase, auditUsecase)
-	oidcHandler := handler.NewOIDCHandler(oidcUsecase)
-	socialHandler := handler.NewSocialHandler(socialUsecase)
-
-	// 11. ルーター構築
-	router := handler.NewRouter(healthHandler, authHandler, oauthHandler, mfaHandler, adminClientHandler, adminRoleHandler, adminUserHandler, oidcHandler, socialHandler, jwtManager, mw, rateLimiter, cfg.RateLimit.HTTPSRedirect)
-
-	// 12. バックグラウンドジョブ起動
-	startBackgroundJobs(ctx, auditUsecase, userRepo, cfg.Auth.AccountPurgeDays)
-
-	// 13. HTTP サーバー起動
+	// 6. HTTP サーバー起動
 	srv := &http.Server{
 		Addr:              fmt.Sprintf(":%d", cfg.Server.Port),
-		Handler:           router,
+		Handler:           a.router,
 		ReadTimeout:       cfg.Server.ReadTimeout,
 		WriteTimeout:      cfg.Server.WriteTimeout,
 		IdleTimeout:       cfg.Server.IdleTimeout,
@@ -187,7 +101,7 @@ func run() error {
 		close(errCh)
 	}()
 
-	// 13. グレースフルシャットダウン
+	// 7. グレースフルシャットダウン
 	select {
 	case err := <-errCh:
 		return fmt.Errorf("server error: %w", err)
