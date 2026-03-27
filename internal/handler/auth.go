@@ -70,20 +70,23 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	session, err := h.auth.Login(r.Context(), req.Email, req.Password, r.RemoteAddr, r.UserAgent())
+	result, err := h.auth.Login(r.Context(), req.Email, req.Password, r.RemoteAddr, r.UserAgent())
 	if err != nil {
 		HandleError(w, err)
 		return
 	}
 
 	JSON(w, http.StatusOK, map[string]any{
-		"session_id": session.ID,
-		"expires_at": session.ExpiresAt,
+		"session_id":    result.Session.ID,
+		"expires_at":    result.Session.ExpiresAt,
+		"access_token":  result.AccessToken,
+		"refresh_token": result.RefreshToken,
 	})
 }
 
 type logoutRequest struct {
-	SessionID string `json:"session_id"`
+	SessionID    string `json:"session_id"`
+	RefreshToken string `json:"refresh_token"`
 }
 
 func (h *AuthHandler) Logout(w http.ResponseWriter, r *http.Request) {
@@ -98,7 +101,7 @@ func (h *AuthHandler) Logout(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := h.auth.Logout(r.Context(), req.SessionID); err != nil {
+	if err := h.auth.Logout(r.Context(), req.SessionID, req.RefreshToken); err != nil {
 		HandleError(w, err)
 		return
 	}

@@ -19,6 +19,7 @@ import (
 	"github.com/HMasataka/gate/internal/usecase"
 )
 
+
 func main() {
 	if err := run(); err != nil {
 		slog.Error("application error", "error", err)
@@ -70,9 +71,16 @@ func run() error {
 	sessionStore := redisclient.NewSessionStore(rdb, cfg.Session)
 	mail := mailer.NewStdoutMailer()
 	userRepo := postgres.NewUserRepo(db)
+	tokenRepo := postgres.NewRefreshTokenRepo(db)
+
+	jwtManager, err := crypto.NewJWTManager(cfg.JWT, cfg.Token)
+	if err != nil {
+		return fmt.Errorf("create jwt manager: %w", err)
+	}
 
 	// 8. ユースケース初期化
-	authUsecase := usecase.NewAuthUsecase(userRepo, hasher, mail, sessionStore, random, cfg.Auth, cfg.Session)
+	tokenUsecase := usecase.NewTokenUsecase(tokenRepo, userRepo, jwtManager, random, cfg.Token)
+	authUsecase := usecase.NewAuthUsecase(userRepo, hasher, mail, sessionStore, random, tokenUsecase, cfg.Auth, cfg.Session)
 
 	// 9. ミドルウェア初期化
 	mw := middleware.New(cfg)
@@ -80,9 +88,10 @@ func run() error {
 	// 10. ハンドラ初期化
 	healthHandler := handler.NewHealthHandler(db, rdb)
 	authHandler := handler.NewAuthHandler(authUsecase)
+	oauthHandler := handler.NewOAuthHandler(tokenUsecase)
 
 	// 11. ルーター構築
-	router := handler.NewRouter(healthHandler, authHandler, mw)
+	router := handler.NewRouter(healthHandler, authHandler, oauthHandler, jwtManager, mw)
 
 	// 12. HTTP サーバー起動
 	srv := &http.Server{

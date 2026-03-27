@@ -6,12 +6,15 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 
+	"github.com/HMasataka/gate/internal/domain"
 	"github.com/HMasataka/gate/internal/middleware"
 )
 
 func NewRouter(
 	healthHandler *HealthHandler,
 	authHandler *AuthHandler,
+	oauthHandler *OAuthHandler,
+	jwtManager domain.JWTManager,
 	mw *middleware.Middleware,
 ) chi.Router {
 	r := chi.NewRouter()
@@ -40,7 +43,18 @@ func NewRouter(
 			r.Post("/resend-verification", authHandler.ResendVerification)
 			r.Post("/forgot-password", authHandler.ForgotPassword)
 			r.Post("/reset-password", authHandler.ResetPassword)
-			r.Post("/change-password", authHandler.ChangePassword)
+
+			// JWT 認証が必要なエンドポイント
+			r.Group(func(r chi.Router) {
+				r.Use(middleware.JWTAuth(jwtManager))
+				r.Post("/change-password", authHandler.ChangePassword)
+			})
+		})
+
+		// OAuth 2.0 トークンエンドポイント
+		r.Route("/oauth", func(r chi.Router) {
+			r.Post("/token", oauthHandler.Token)
+			r.Post("/revoke", oauthHandler.Revoke)
 		})
 	})
 

@@ -9,12 +9,19 @@ import (
 	"github.com/HMasataka/gate/internal/domain"
 )
 
+type LoginResult struct {
+	Session      *domain.Session
+	AccessToken  string
+	RefreshToken string
+}
+
 type AuthUsecase struct {
 	userRepo domain.UserRepository
 	hasher   domain.PasswordHasher
 	mailer   domain.Mailer
 	sessions domain.SessionStore
 	random   domain.RandomGenerator
+	token    *TokenUsecase
 	authCfg  config.AuthConfig
 	sessCfg  config.SessionConfig
 }
@@ -25,6 +32,7 @@ func NewAuthUsecase(
 	mailer domain.Mailer,
 	sessions domain.SessionStore,
 	random domain.RandomGenerator,
+	token *TokenUsecase,
 	authCfg config.AuthConfig,
 	sessCfg config.SessionConfig,
 ) *AuthUsecase {
@@ -34,6 +42,7 @@ func NewAuthUsecase(
 		mailer:   mailer,
 		sessions: sessions,
 		random:   random,
+		token:    token,
 		authCfg:  authCfg,
 		sessCfg:  sessCfg,
 	}
@@ -93,7 +102,7 @@ func (u *AuthUsecase) Register(ctx context.Context, email, password string) (*do
 	return user, nil
 }
 
-func (u *AuthUsecase) Login(ctx context.Context, email, password, ipAddress, userAgent string) (*domain.Session, error) {
+func (u *AuthUsecase) Login(ctx context.Context, email, password, ipAddress, userAgent string) (*LoginResult, error) {
 	user, err := u.userRepo.GetByEmail(ctx, email)
 	if err != nil {
 		return nil, domain.ErrInvalidCredentials
@@ -128,11 +137,34 @@ func (u *AuthUsecase) Login(ctx context.Context, email, password, ipAddress, use
 		return nil, err
 	}
 
-	return session, nil
+	result := &LoginResult{
+		Session: session,
+	}
+
+	if u.token != nil {
+		accessToken, refreshToken, err := u.token.IssueTokenPair(ctx, user.ID, "", nil)
+		if err != nil {
+			return nil, err
+		}
+		result.AccessToken = accessToken
+		result.RefreshToken = refreshToken
+	}
+
+	return result, nil
 }
 
-func (u *AuthUsecase) Logout(ctx context.Context, sessionID string) error {
-	return u.sessions.Delete(ctx, sessionID)
+func (u *AuthUsecase) Logout(ctx context.Context, sessionID, refreshToken string) error {
+	if err := u.sessions.Delete(ctx, sessionID); err != nil {
+		return err
+	}
+
+	if u.token != nil && refreshToken != "" {
+		if err := u.token.RevokeToken(ctx, refreshToken); err != nil {
+			slog.ErrorContext(ctx, "failed to revoke refresh token on logout", slog.Any("error", err))
+		}
+	}
+
+	return nil
 }
 
 func (u *AuthUsecase) VerifyEmail(ctx context.Context, email, token string) error {
