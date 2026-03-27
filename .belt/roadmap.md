@@ -60,18 +60,18 @@ v0.10 (Security & Ops) ※ v0.9 完了後
 **ゴール**: プロジェクト骨格を構築し、設定読み込み・DB/Redis 接続・マイグレーション・ヘルスチェックが動作する最小サーバーを起動する
 **完動品としての価値**: `compose.yml` で PostgreSQL + Redis + Gate を起動し、`GET /health` と `GET /ready` が 200 OK を返す
 
-- [ ] プロジェクト構造の整理 (ルート `main.go` を `cmd/gate/main.go` に移行、`Taskfile.yml` の `MAIN_FILE` パスを更新)
-- [ ] Go モジュール初期化と依存ライブラリの追加 (`go get` で Chi, pgx/v5, sqlx, go-redis/v9, caarlos0/env/v11, golang-migrate/migrate/v4, go-playground/validator/v10, prometheus/client_golang, golang-jwt/jwt/v5, pquerna/otp, golang.org/x/crypto を追加)
-- [ ] 設定構造体の実装 (`internal/config/config.go`: 全環境変数バインド、`Validate()` メソッドでハードリミット検証)
-- [ ] ドメイン層のエンティティ定義 (`internal/domain/`: User, OAuthClient, Role, Permission, RefreshToken, AuthorizationCode, Session, SocialConnection, AuditLog エンティティ、UserStatus/ClientType/AuditAction 列挙型)
-- [ ] ドメイン層のインターフェース定義 (`internal/domain/`: 全リポジトリインターフェース、PasswordHasher, JWTManager, Mailer, SessionStore, RateLimiter, PermissionResolver, CaptchaVerifier インターフェース、ドメインエラー定義)
-- [ ] インフラ基盤: DB 接続・Redis 接続・乱数生成 (`internal/infra/postgres/db.go`, `internal/infra/redis/client.go`, `internal/infra/crypto/rand.go`: 接続プーリング設定含む)
-- [ ] DB マイグレーション初期スキーマ (`migrations/000001_initial_schema.up.sql`, `down.sql`: 全テーブル、部分ユニークインデックス含む)
-- [ ] トランザクションヘルパー (`internal/infra/postgres/tx.go`)
-- [ ] 基本ミドルウェア (`internal/middleware/`: Recovery, RequestID, Logging, Metrics, CORS)
-- [ ] ヘルスチェックハンドラ + レスポンス/リクエストヘルパー (`internal/handler/health.go`, `response.go`, `request.go`: 統一エラーレスポンス形式含む)
-- [ ] Chi ルーター骨格 + エントリポイント (`internal/handler/router.go`, `cmd/gate/main.go`: 設定読み込み → DB/Redis → マイグレーション → ミドルウェア → ルーター → HTTP サーバー → グレースフルシャットダウン)
-- [ ] compose.yml + Dockerfile + .env.example (`compose.yml`: PostgreSQL + Redis + Gate、マルチステージ Dockerfile、`.env.example` に必須環境変数の雛形)
+- [x] プロジェクト構造の整理 (ルート `main.go` を `cmd/gate/main.go` に移行、`Taskfile.yml` の `MAIN_FILE` パスを更新)
+- [x] Go モジュール初期化と依存ライブラリの追加 (`go get` で Chi, pgx/v5, sqlx, go-redis/v9, caarlos0/env/v11, golang-migrate/migrate/v4, go-playground/validator/v10, prometheus/client_golang, golang-jwt/jwt/v5, pquerna/otp, golang.org/x/crypto を追加)
+- [x] 設定構造体の実装 (`internal/config/config.go`: 全環境変数バインド、`Validate()` メソッドでハードリミット検証)
+- [x] ドメイン層のエンティティ定義 (`internal/domain/`: User, OAuthClient, Role, Permission, RefreshToken, AuthorizationCode, Session, SocialConnection, AuditLog エンティティ、UserStatus/ClientType/AuditAction 列挙型)
+- [x] ドメイン層のインターフェース定義 (`internal/domain/`: 全リポジトリインターフェース、PasswordHasher, JWTManager, Mailer, SessionStore, RateLimiter, PermissionResolver, CaptchaVerifier インターフェース、ドメインエラー定義)
+- [x] インフラ基盤: DB 接続・Redis 接続・乱数生成 (`internal/infra/postgres/db.go`, `internal/infra/redis/client.go`, `internal/infra/crypto/rand.go`: 接続プーリング設定含む)
+- [x] DB マイグレーション初期スキーマ (`migrations/000001_initial_schema.up.sql`, `down.sql`: 全テーブル、部分ユニークインデックス含む)
+- [x] トランザクションヘルパー (`internal/infra/postgres/tx.go`)
+- [x] 基本ミドルウェア (`internal/middleware/`: Recovery, RequestID, Logging, Metrics, CORS)
+- [x] ヘルスチェックハンドラ + レスポンス/リクエストヘルパー (`internal/handler/health.go`, `response.go`, `request.go`: 統一エラーレスポンス形式含む)
+- [x] Chi ルーター骨格 + エントリポイント (`internal/handler/router.go`, `cmd/gate/main.go`: 設定読み込み → DB/Redis → マイグレーション → ミドルウェア → ルーター → HTTP サーバー → グレースフルシャットダウン)
+- [x] compose.yml + Dockerfile + .env.example (`compose.yml`: PostgreSQL + Redis + Gate、マルチステージ Dockerfile、`.env.example` に必須環境変数の雛形)
 
 ---
 
@@ -80,13 +80,13 @@ v0.10 (Security & Ops) ※ v0.9 完了後
 **ゴール**: メール + パスワードによるユーザー登録・ログイン・ログアウト・メール検証・パスワード変更/リセットが動作する
 **完動品としての価値**: ユーザーが登録・ログインでき、セッション ID ベースで認証状態を管理する。メール検証 (stdout) とパスワードリセットが動作する。JWT は v0.3 で追加、v0.2 ではセッション ID をレスポンスに返す
 
-- [ ] argon2id パスワードハッシュ実装 (`internal/infra/crypto/argon2.go`: PHC 形式、セマフォ同時実行制御、context キャンセル対応)
-- [ ] UserRepository PostgreSQL 実装 (`internal/infra/postgres/user.go`: CRUD、メール検索、楽観的ロック、部分ユニークインデックス活用)
-- [ ] Redis セッションストア実装 (`internal/infra/redis/session.go`: 作成/取得/削除、`session:{id}` Hash + `user:sessions:{user_id}` Set、同時セッション数制限)
-- [ ] Mailer インターフェース + stdout 実装 (`internal/infra/mailer/mailer.go`, `stdout.go`: 検証メール、パスワードリセットメール)
-- [ ] 認証ユースケース実装 (`internal/usecase/auth.go`: 登録、ログイン、ログアウト、メール検証、検証メール再送、パスワード変更、パスワードリセット、アカウントロック、ユーザー列挙防止)
-- [ ] 認証ハンドラ実装 (`internal/handler/auth.go`: `POST /api/v1/auth/register`, `login`, `logout`, `verify-email`, `resend-verification`, `forgot-password`, `reset-password`, `change-password`)
-- [ ] ルーターへの認証エンドポイント登録 + main.go ワイヤリング更新
+- [x] argon2id パスワードハッシュ実装 (`internal/infra/crypto/argon2.go`: PHC 形式、セマフォ同時実行制御、context キャンセル対応)
+- [x] UserRepository PostgreSQL 実装 (`internal/infra/postgres/user.go`: CRUD、メール検索、楽観的ロック、部分ユニークインデックス活用)
+- [x] Redis セッションストア実装 (`internal/infra/redis/session.go`: 作成/取得/削除、`session:{id}` Hash + `user:sessions:{user_id}` Set、同時セッション数制限)
+- [x] Mailer インターフェース + stdout 実装 (`internal/infra/mailer/mailer.go`, `stdout.go`: 検証メール、パスワードリセットメール)
+- [x] 認証ユースケース実装 (`internal/usecase/auth.go`: 登録、ログイン、ログアウト、メール検証、検証メール再送、パスワード変更、パスワードリセット、アカウントロック、ユーザー列挙防止)
+- [x] 認証ハンドラ実装 (`internal/handler/auth.go`: `POST /api/v1/auth/register`, `login`, `logout`, `verify-email`, `resend-verification`, `forgot-password`, `reset-password`, `change-password`)
+- [x] ルーターへの認証エンドポイント登録 + main.go ワイヤリング更新
 
 ---
 
@@ -95,12 +95,12 @@ v0.10 (Security & Ops) ※ v0.9 完了後
 **ゴール**: JWT アクセストークン発行・検証、リフレッシュトークンローテーション・ファミリー検出・失効が動作する
 **完動品としての価値**: ログイン時に JWT + リフレッシュトークンが発行され、ローテーション・ファミリー検出・失効が機能する
 
-- [ ] JWT 署名・検証実装 (`internal/infra/crypto/jwt.go`: ES256/RS256、PEM 鍵読み込み、複数鍵対応、`kid` ヘッダー、JTI 生成、JWKS エクスポート)
-- [ ] TokenRepository PostgreSQL 実装 (`internal/infra/postgres/token.go`: リフレッシュトークン CRUD (SHA-256 ハッシュ保存)、ファミリー ID 検索・一括失効、`tokens_revoked_at` 判定、認可コード CRUD 構造)
-- [ ] トークンユースケース実装 (`internal/usecase/token.go`: ローテーション、ファミリー検出、グレースピリオド、個別/ユーザー単位失効、カスタムクレーム付与)
-- [ ] JWT 認証ミドルウェア (`internal/middleware/auth.go`: Bearer トークン検証、`kid` 鍵選択、`tokens_revoked_at` 判定、context 注入)
-- [ ] ログインフローの JWT 統合 (`internal/usecase/auth.go` 更新: ログイン成功時に JWT + リフレッシュトークン発行、ログアウト時にリフレッシュトークン失効追加。`internal/handler/oauth.go` 新規: `POST /oauth/token` (refresh_token)、`POST /oauth/revoke` 部分実装)
-- [ ] main.go ワイヤリング更新 (JWTManager, TokenRepository, TokenUsecase、JWT 認証ミドルウェア登録)
+- [x] JWT 署名・検証実装 (`internal/infra/crypto/jwt.go`: ES256/RS256、PEM 鍵読み込み、複数鍵対応、`kid` ヘッダー、JTI 生成、JWKS エクスポート)
+- [x] TokenRepository PostgreSQL 実装 (`internal/infra/postgres/token.go`: リフレッシュトークン CRUD (SHA-256 ハッシュ保存)、ファミリー ID 検索・一括失効、`tokens_revoked_at` 判定、認可コード CRUD 構造)
+- [x] トークンユースケース実装 (`internal/usecase/token.go`: ローテーション、ファミリー検出、グレースピリオド、個別/ユーザー単位失効、カスタムクレーム付与)
+- [x] JWT 認証ミドルウェア (`internal/middleware/auth.go`: Bearer トークン検証、`kid` 鍵選択、`tokens_revoked_at` 判定、context 注入)
+- [x] ログインフローの JWT 統合 (`internal/usecase/auth.go` 更新: ログイン成功時に JWT + リフレッシュトークン発行、ログアウト時にリフレッシュトークン失効追加。`internal/handler/oauth.go` 新規: `POST /oauth/token` (refresh_token)、`POST /oauth/revoke` 部分実装)
+- [x] main.go ワイヤリング更新 (JWTManager, TokenRepository, TokenUsecase、JWT 認証ミドルウェア登録)
 
 ---
 
