@@ -104,6 +104,8 @@ func run() error {
 	hasher := crypto.NewArgon2Hasher(cfg.Argon2)
 	random := &crypto.SecureRandom{}
 	sessionStore := redisclient.NewSessionStore(rdb, cfg.Session)
+	rateLimiter := redisclient.NewRateLimiterStore(rdb)
+	_ = crypto.NewJTIStore(rdb) // JTI replay prevention store (integration point for future use)
 	mail := mailer.NewStdoutMailer()
 	userRepo := postgres.NewUserRepo(db)
 	tokenRepo := postgres.NewRefreshTokenRepo(db)
@@ -161,7 +163,7 @@ func run() error {
 	socialHandler := handler.NewSocialHandler(socialUsecase)
 
 	// 11. ルーター構築
-	router := handler.NewRouter(healthHandler, authHandler, oauthHandler, mfaHandler, adminClientHandler, adminRoleHandler, adminUserHandler, oidcHandler, socialHandler, jwtManager, mw)
+	router := handler.NewRouter(healthHandler, authHandler, oauthHandler, mfaHandler, adminClientHandler, adminRoleHandler, adminUserHandler, oidcHandler, socialHandler, jwtManager, mw, rateLimiter, cfg.RateLimit.HTTPSRedirect)
 
 	// 12. バックグラウンドジョブ起動
 	startBackgroundJobs(ctx, auditUsecase, userRepo, cfg.Auth.AccountPurgeDays)

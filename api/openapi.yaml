@@ -1,0 +1,615 @@
+openapi: "3.0.3"
+info:
+  title: Gate - Authentication & Authorization Server
+  description: |
+    Gate is an authentication and authorization server implementing OAuth 2.0, OpenID Connect,
+    and JWT-based authentication with support for MFA, social login, and role-based access control.
+  version: "1.0.0"
+  contact:
+    name: Gate API
+servers:
+  - url: http://localhost:8080
+    description: Local development server
+
+tags:
+  - name: health
+    description: Health check endpoints
+  - name: auth
+    description: Authentication endpoints
+  - name: oauth
+    description: OAuth 2.0 endpoints
+  - name: oidc
+    description: OpenID Connect endpoints
+
+paths:
+  /health:
+    get:
+      summary: Liveness check
+      description: Returns 200 if the server is alive.
+      tags: [health]
+      responses:
+        "200":
+          description: Server is alive
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthResponse"
+
+  /ready:
+    get:
+      summary: Readiness check
+      description: Returns 200 if the server is ready to accept traffic (DB and Redis are reachable).
+      tags: [health]
+      responses:
+        "200":
+          description: Server is ready
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthResponse"
+        "503":
+          description: Server is not ready
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /.well-known/openid-configuration:
+    get:
+      summary: OIDC Discovery
+      description: OpenID Connect Discovery endpoint returning provider metadata.
+      tags: [oidc]
+      responses:
+        "200":
+          description: OIDC provider metadata
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OIDCDiscovery"
+
+  /.well-known/jwks.json:
+    get:
+      summary: JSON Web Key Set
+      description: Returns the public keys used to verify JWTs.
+      tags: [oidc]
+      responses:
+        "200":
+          description: JWKS response
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/JWKS"
+
+  /api/v1/auth/register:
+    post:
+      summary: Register a new user
+      description: |
+        Creates a new user account. Sends a verification email after registration.
+        Rate limited to 10 requests per minute per IP.
+      tags: [auth]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RegisterRequest"
+      responses:
+        "201":
+          description: User registered successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RegisterResponse"
+        "400":
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "409":
+          description: Email already exists
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "429":
+          description: Rate limit exceeded
+          headers:
+            Retry-After:
+              schema:
+                type: integer
+              description: Seconds until the rate limit resets
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /api/v1/auth/login:
+    post:
+      summary: Login
+      description: |
+        Authenticates a user and returns access, refresh, and ID tokens.
+        Rate limited to 10 requests per minute per IP.
+      tags: [auth]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LoginRequest"
+      responses:
+        "200":
+          description: Login successful
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TokenResponse"
+        "401":
+          description: Invalid credentials
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Account locked, unverified, or MFA required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "429":
+          description: Rate limit exceeded
+          headers:
+            Retry-After:
+              schema:
+                type: integer
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /api/v1/auth/logout:
+    post:
+      summary: Logout
+      description: Invalidates the current session and refresh token.
+      tags: [auth]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LogoutRequest"
+      responses:
+        "200":
+          description: Logout successful
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "logged out successfully"
+
+  /api/v1/auth/forgot-password:
+    post:
+      summary: Request password reset
+      description: |
+        Sends a password reset email to the given address.
+        Rate limited to 3 requests per minute per IP.
+      tags: [auth]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ForgotPasswordRequest"
+      responses:
+        "200":
+          description: Password reset email sent (always 200 to prevent email enumeration)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+        "429":
+          description: Rate limit exceeded
+          headers:
+            Retry-After:
+              schema:
+                type: integer
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /api/v1/auth/reset-password:
+    post:
+      summary: Reset password
+      description: |
+        Resets the user's password using a valid reset token.
+        Rate limited to 3 requests per minute per IP.
+      tags: [auth]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ResetPasswordRequest"
+      responses:
+        "200":
+          description: Password reset successful
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+        "400":
+          description: Invalid or expired token
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "429":
+          description: Rate limit exceeded
+          headers:
+            Retry-After:
+              schema:
+                type: integer
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /api/v1/oauth/authorize:
+    get:
+      summary: OAuth 2.0 Authorization endpoint
+      description: Initiates the OAuth 2.0 authorization code flow.
+      tags: [oauth]
+      parameters:
+        - name: response_type
+          in: query
+          required: true
+          schema:
+            type: string
+            enum: [code]
+        - name: client_id
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: redirect_uri
+          in: query
+          required: true
+          schema:
+            type: string
+            format: uri
+        - name: scope
+          in: query
+          schema:
+            type: string
+            example: "openid profile email"
+        - name: state
+          in: query
+          schema:
+            type: string
+        - name: nonce
+          in: query
+          schema:
+            type: string
+        - name: code_challenge
+          in: query
+          schema:
+            type: string
+        - name: code_challenge_method
+          in: query
+          schema:
+            type: string
+            enum: [S256]
+      responses:
+        "302":
+          description: Redirect to redirect_uri with authorization code
+        "400":
+          description: Invalid request parameters
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /api/v1/oauth/token:
+    post:
+      summary: OAuth 2.0 Token endpoint
+      description: |
+        Exchanges an authorization code or refresh token for access tokens.
+        Rate limited to 20 requests per minute per IP.
+      tags: [oauth]
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: "#/components/schemas/TokenRequest"
+      responses:
+        "200":
+          description: Token issued successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TokenResponse"
+        "400":
+          description: Invalid grant or request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Invalid client credentials
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "429":
+          description: Rate limit exceeded
+          headers:
+            Retry-After:
+              schema:
+                type: integer
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /oauth/userinfo:
+    get:
+      summary: OIDC UserInfo endpoint
+      description: Returns claims about the authenticated user.
+      tags: [oidc]
+      security:
+        - BearerAuth: []
+      responses:
+        "200":
+          description: User claims
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserInfo"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    HealthResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          example: ok
+
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: object
+          properties:
+            code:
+              type: string
+              example: invalid_credentials
+            message:
+              type: string
+              example: invalid email or password
+
+    RegisterRequest:
+      type: object
+      required: [email, password]
+      properties:
+        email:
+          type: string
+          format: email
+          example: user@example.com
+        password:
+          type: string
+          format: password
+          minLength: 8
+          maxLength: 128
+
+    RegisterResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        email:
+          type: string
+          format: email
+        message:
+          type: string
+          example: "verification email sent"
+
+    LoginRequest:
+      type: object
+      required: [email, password]
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+          format: password
+        mfa_code:
+          type: string
+          description: TOTP code (required when MFA is enabled)
+
+    LogoutRequest:
+      type: object
+      properties:
+        refresh_token:
+          type: string
+        session_id:
+          type: string
+
+    ForgotPasswordRequest:
+      type: object
+      required: [email]
+      properties:
+        email:
+          type: string
+          format: email
+
+    ResetPasswordRequest:
+      type: object
+      required: [token, password]
+      properties:
+        token:
+          type: string
+        password:
+          type: string
+          format: password
+          minLength: 8
+          maxLength: 128
+
+    TokenRequest:
+      type: object
+      required: [grant_type]
+      properties:
+        grant_type:
+          type: string
+          enum: [authorization_code, refresh_token, client_credentials]
+        code:
+          type: string
+          description: Authorization code (required for authorization_code grant)
+        redirect_uri:
+          type: string
+          format: uri
+        client_id:
+          type: string
+        client_secret:
+          type: string
+        refresh_token:
+          type: string
+          description: Refresh token (required for refresh_token grant)
+        code_verifier:
+          type: string
+          description: PKCE code verifier
+
+    TokenResponse:
+      type: object
+      properties:
+        access_token:
+          type: string
+        token_type:
+          type: string
+          example: Bearer
+        expires_in:
+          type: integer
+          example: 900
+        refresh_token:
+          type: string
+        id_token:
+          type: string
+        scope:
+          type: string
+
+    UserInfo:
+      type: object
+      properties:
+        sub:
+          type: string
+          format: uuid
+        email:
+          type: string
+          format: email
+        email_verified:
+          type: boolean
+        name:
+          type: string
+
+    OIDCDiscovery:
+      type: object
+      properties:
+        issuer:
+          type: string
+          format: uri
+        authorization_endpoint:
+          type: string
+          format: uri
+        token_endpoint:
+          type: string
+          format: uri
+        userinfo_endpoint:
+          type: string
+          format: uri
+        jwks_uri:
+          type: string
+          format: uri
+        response_types_supported:
+          type: array
+          items:
+            type: string
+        subject_types_supported:
+          type: array
+          items:
+            type: string
+        id_token_signing_alg_values_supported:
+          type: array
+          items:
+            type: string
+        scopes_supported:
+          type: array
+          items:
+            type: string
+        token_endpoint_auth_methods_supported:
+          type: array
+          items:
+            type: string
+        claims_supported:
+          type: array
+          items:
+            type: string
+        grant_types_supported:
+          type: array
+          items:
+            type: string
+        code_challenge_methods_supported:
+          type: array
+          items:
+            type: string
+
+    JWKS:
+      type: object
+      properties:
+        keys:
+          type: array
+          items:
+            type: object
+            properties:
+              kty:
+                type: string
+                example: EC
+              crv:
+                type: string
+                example: P-256
+              x:
+                type: string
+              y:
+                type: string
+              kid:
+                type: string
+              use:
+                type: string
+                example: sig
+              alg:
+                type: string
+                example: ES256

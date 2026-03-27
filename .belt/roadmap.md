@@ -177,18 +177,18 @@ v0.10 (Security & Ops) ※ v0.9 完了後
 
 **前提: v0.3〜v0.8 の全マイルストーンが完了していること**
 
-- [ ] AuditLogRepository PostgreSQL 実装 (`internal/infra/postgres/audit.go`: 書き込み、検索、保持期間に基づく削除)
-- [ ] 監査ログの auth.go への統合 (ログイン、ログアウト、認証失敗の記録)
-- [ ] 監査ログの token.go への統合 (トークン発行、失効の記録)
-- [ ] 監査ログの oauth.go への統合 (認可コード発行、トークン交換の記録)
-- [ ] 監査ログの role.go への統合 (権限変更の記録)
-- [ ] 監査ログの mfa.go への統合 (MFA 操作の記録)
-- [ ] 監査ログの social.go への統合 (ソーシャルログインの記録)
-- [ ] Admin ユーザー管理ユースケース (`internal/usecase/user.go`: 一覧/詳細/更新/論理削除/ロック/アンロック/MFA リセット)
-- [ ] アカウント自動物理削除 (バックグラウンドゴルーチン、`ACCOUNT_PURGE_DAYS` 設定可能、関連データカスケード削除)
-- [ ] 監査ログ自動クリーンアップ (バックグラウンドゴルーチン、`AUDIT_LOG_RETENTION_DAYS` 設定可能)
-- [ ] Admin ユーザー管理ハンドラ (`internal/handler/admin_user.go`: 一覧/詳細/更新/削除/ロック/アンロック/MFA リセット)
-- [ ] ルーター + main.go ワイヤリング更新 (バックグラウンドジョブのグレースフルシャットダウン統合含む)
+- [x] AuditLogRepository PostgreSQL 実装 (`internal/infra/postgres/audit.go`: 書き込み、検索、保持期間に基づく削除)
+- [x] 監査ログの auth.go への統合 (ログイン、ログアウト、認証失敗の記録)
+- [x] 監査ログの token.go への統合 (トークン発行、失効の記録)
+- [x] 監査ログの oauth.go への統合 (認可コード発行、トークン交換の記録)
+- [x] 監査ログの role.go への統合 (権限変更の記録)
+- [x] 監査ログの mfa.go への統合 (MFA 操作の記録)
+- [x] 監査ログの social.go への統合 (ソーシャルログインの記録)
+- [x] Admin ユーザー管理ユースケース (`internal/usecase/user.go`: 一覧/詳細/更新/論理削除/ロック/アンロック/MFA リセット)
+- [x] アカウント自動物理削除 (バックグラウンドゴルーチン、`ACCOUNT_PURGE_DAYS` 設定可能、関連データカスケード削除)
+- [x] 監査ログ自動クリーンアップ (バックグラウンドゴルーチン、`AUDIT_LOG_RETENTION_DAYS` 設定可能)
+- [x] Admin ユーザー管理ハンドラ (`internal/handler/admin_user.go`: 一覧/詳細/更新/削除/ロック/アンロック/MFA リセット)
+- [x] ルーター + main.go ワイヤリング更新 (バックグラウンドジョブのグレースフルシャットダウン統合含む)
 
 ---
 
@@ -197,14 +197,14 @@ v0.10 (Security & Ops) ※ v0.9 完了後
 **ゴール**: レートリミット、HTTPS 強制、JTI リプレイ防止、OpenAPI 定義が完成し、本番デプロイ可能な状態にする
 **完動品としての価値**: セキュリティ要件を満たし、API ドキュメントが揃った本番対応サーバー
 
-- [ ] Redis レートリミットストア実装 (`internal/infra/redis/ratelimit.go`: Sliding Window Counter、Redis Sorted Set + Lua スクリプト)
-- [ ] レートリミットミドルウェア (`internal/middleware/ratelimit.go`: IP ベース、エンドポイントごと設定、`Retry-After` 付き 429)
-- [ ] レートリミットのルーター統合 (各エンドポイントグループに適切なレートリミットを適用)
-- [ ] HTTPS 強制ミドルウェア (X-Forwarded-Proto チェック、本番環境のみ有効)
-- [ ] JTI リプレイ防止 (Redis に短期間保存で重複検出)
-- [ ] OpenAPI 3.0 定義ファイル作成 (全エンドポイントの API 仕様書)
-- [ ] Prometheus メトリクスの最終確認 (全ミドルウェア・エンドポイントとの連携確認)
-- [ ] Dockerfile / compose.yml / .env.example の最終調整
+- [x] Redis レートリミットストア実装 (`internal/infra/redis/ratelimit.go`: Sliding Window Counter、Redis Sorted Set + Lua スクリプト)
+- [x] レートリミットミドルウェア (`internal/middleware/ratelimit.go`: IP ベース、エンドポイントごと設定、`Retry-After` 付き 429)
+- [x] レートリミットのルーター統合 (各エンドポイントグループに適切なレートリミットを適用)
+- [x] HTTPS 強制ミドルウェア (X-Forwarded-Proto チェック、本番環境のみ有効)
+- [x] JTI リプレイ防止 (Redis に短期間保存で重複検出)
+- [x] OpenAPI 3.0 定義ファイル作成 (全エンドポイントの API 仕様書)
+- [x] Prometheus メトリクスの最終確認 (全ミドルウェア・エンドポイントとの連携確認)
+- [x] Dockerfile / compose.yml / .env.example の最終調整
 
 ---
 

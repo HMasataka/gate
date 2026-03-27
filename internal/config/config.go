@@ -10,21 +10,22 @@ import (
 )
 
 type Config struct {
-	Server   ServerConfig
-	Database DatabaseConfig
-	Redis    RedisConfig
-	Auth     AuthConfig
-	JWT      JWTConfig
-	Token    TokenConfig
-	OAuth    OAuthConfig
-	MFA      MFAConfig
-	Session  SessionConfig
-	CORS     CORSConfig
-	Argon2   Argon2Config
-	Mailer   MailerConfig
-	Log      LogConfig
-	Metrics  MetricsConfig
-	Social   SocialConfig
+	Server    ServerConfig
+	Database  DatabaseConfig
+	Redis     RedisConfig
+	Auth      AuthConfig
+	JWT       JWTConfig
+	Token     TokenConfig
+	OAuth     OAuthConfig
+	MFA       MFAConfig
+	Session   SessionConfig
+	CORS      CORSConfig
+	Argon2    Argon2Config
+	Mailer    MailerConfig
+	Log       LogConfig
+	Metrics   MetricsConfig
+	Social    SocialConfig
+	RateLimit RateLimitConfig
 }
 
 type ServerConfig struct {
@@ -131,6 +132,16 @@ type SocialConfig struct {
 	GitHubClientID       string `env:"SOCIAL_GITHUB_CLIENT_ID"       envDefault:""`
 	GitHubClientSecret   string `env:"SOCIAL_GITHUB_CLIENT_SECRET"   envDefault:""`
 	GitHubRedirectURI    string `env:"SOCIAL_GITHUB_REDIRECT_URI"    envDefault:""`
+}
+
+type RateLimitConfig struct {
+	AuthLimit     int           `env:"RATE_LIMIT_AUTH"          envDefault:"10"`
+	AuthWindow    time.Duration `env:"RATE_LIMIT_AUTH_WINDOW"   envDefault:"1m"`
+	PasswordLimit int           `env:"RATE_LIMIT_PASSWORD"      envDefault:"3"`
+	PasswordWindow time.Duration `env:"RATE_LIMIT_PASSWORD_WINDOW" envDefault:"1m"`
+	TokenLimit    int           `env:"RATE_LIMIT_TOKEN"         envDefault:"20"`
+	TokenWindow   time.Duration `env:"RATE_LIMIT_TOKEN_WINDOW"  envDefault:"1m"`
+	HTTPSRedirect bool          `env:"HTTPS_REDIRECT"           envDefault:"false"`
 }
 
 // Load parses configuration from environment variables.

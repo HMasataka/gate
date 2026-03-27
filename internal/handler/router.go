@@ -2,6 +2,7 @@ package handler
 
 import (
 	"net/http"
+	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
@@ -22,10 +23,13 @@ func NewRouter(
 	socialHandler *SocialHandler,
 	jwtManager domain.JWTManager,
 	mw *middleware.Middleware,
+	limiter domain.RateLimiter,
+	httpsEnabled bool,
 ) chi.Router {
 	r := chi.NewRouter()
 
 	// グローバルミドルウェア (順序重要)
+	r.Use(middleware.HTTPSRedirect(httpsEnabled))
 	r.Use(mw.Recovery)
 	r.Use(mw.RequestID)
 	r.Use(mw.CORS)
@@ -56,13 +60,15 @@ func NewRouter(
 	// API v1
 	r.Route("/api/v1", func(r chi.Router) {
 		r.Route("/auth", func(r chi.Router) {
-			r.Post("/register", authHandler.Register)
-			r.Post("/login", authHandler.Login)
+			// ログイン・登録: 10 req/min per IP
+			r.With(middleware.RateLimit(limiter, 10, time.Minute)).Post("/register", authHandler.Register)
+			r.With(middleware.RateLimit(limiter, 10, time.Minute)).Post("/login", authHandler.Login)
 			r.Post("/logout", authHandler.Logout)
 			r.Post("/verify-email", authHandler.VerifyEmail)
 			r.Post("/resend-verification", authHandler.ResendVerification)
-			r.Post("/forgot-password", authHandler.ForgotPassword)
-			r.Post("/reset-password", authHandler.ResetPassword)
+			// パスワードリセット: 3 req/min per IP
+			r.With(middleware.RateLimit(limiter, 3, time.Minute)).Post("/forgot-password", authHandler.ForgotPassword)
+			r.With(middleware.RateLimit(limiter, 3, time.Minute)).Post("/reset-password", authHandler.ResetPassword)
 
 			// JWT 認証が必要なエンドポイント
 			r.Group(func(r chi.Router) {
@@ -78,7 +84,8 @@ func NewRouter(
 		// OAuth 2.0 エンドポイント
 		r.Route("/oauth", func(r chi.Router) {
 			r.Get("/authorize", oauthHandler.Authorize)
-			r.Post("/token", oauthHandler.Token)
+			// OAuth トークン: 20 req/min per IP
+			r.With(middleware.RateLimit(limiter, 20, time.Minute)).Post("/token", oauthHandler.Token)
 			r.Post("/revoke", oauthHandler.Revoke)
 			r.Post("/introspect", oauthHandler.Introspect)
 		})
