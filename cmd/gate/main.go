@@ -22,7 +22,7 @@ func main() {
 	}
 }
 
-func startBackgroundJobs(ctx context.Context, auditUsecase *usecase.AuditUsecase, userRepo domain.UserRepository, purgeDays int) {
+func startDailyCleanupScheduler(ctx context.Context, auditUsecase *usecase.AuditUsecase, userRepo domain.UserRepository, purgeDays int) {
 	ticker := time.NewTicker(24 * time.Hour)
 	go func() {
 		defer ticker.Stop()
@@ -75,7 +75,7 @@ func run() error {
 	}
 	defer a.cleanup()
 
-	startBackgroundJobs(ctx, a.auditUsecase, a.userRepo, cfg.Auth.AccountPurgeDays)
+	startDailyCleanupScheduler(ctx, a.auditUsecase, a.userRepo, cfg.Auth.AccountPurgeDays)
 
 	srv := &http.Server{
 		Addr:              fmt.Sprintf(":%d", cfg.Server.Port),
