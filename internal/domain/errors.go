@@ -26,4 +26,6 @@ var (
 	ErrInvalidGrantType   = errors.New("invalid grant type")
 	ErrInvalidClient      = errors.New("invalid client")
 	ErrCodeReuse          = errors.New("authorization code reuse detected")
+	ErrPasswordTooShort   = errors.New("password too short")
+	ErrPasswordTooLong    = errors.New("password too long")
 )

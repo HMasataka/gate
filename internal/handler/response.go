@@ -65,6 +65,10 @@ func HandleError(w http.ResponseWriter, err error) {
 		Error(w, http.StatusUnauthorized, "invalid_client", "invalid client credentials")
 	case errors.Is(err, domain.ErrCodeReuse):
 		Error(w, http.StatusBadRequest, "invalid_grant", "authorization code has been used")
+	case errors.Is(err, domain.ErrPasswordTooShort):
+		Error(w, http.StatusBadRequest, "invalid_password", "password is too short")
+	case errors.Is(err, domain.ErrPasswordTooLong):
+		Error(w, http.StatusBadRequest, "invalid_password", "password is too long")
 	default:
 		Error(w, http.StatusInternalServerError, "internal_error", "internal server error")
 	}

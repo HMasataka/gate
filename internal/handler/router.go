@@ -11,6 +11,7 @@ import (
 
 func NewRouter(
 	healthHandler *HealthHandler,
+	authHandler *AuthHandler,
 	mw *middleware.Middleware,
 ) chi.Router {
 	r := chi.NewRouter()
@@ -28,6 +29,20 @@ func NewRouter(
 
 	// Prometheus メトリクス
 	r.Handle("/metrics", promhttp.Handler())
+
+	// API v1
+	r.Route("/api/v1", func(r chi.Router) {
+		r.Route("/auth", func(r chi.Router) {
+			r.Post("/register", authHandler.Register)
+			r.Post("/login", authHandler.Login)
+			r.Post("/logout", authHandler.Logout)
+			r.Post("/verify-email", authHandler.VerifyEmail)
+			r.Post("/resend-verification", authHandler.ResendVerification)
+			r.Post("/forgot-password", authHandler.ForgotPassword)
+			r.Post("/reset-password", authHandler.ResetPassword)
+			r.Post("/change-password", authHandler.ChangePassword)
+		})
+	})
 
 	// 404 ハンドラ
 	r.NotFound(func(w http.ResponseWriter, r *http.Request) {

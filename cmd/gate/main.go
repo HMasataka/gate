@@ -11,9 +11,12 @@ import (
 
 	"github.com/HMasataka/gate/internal/config"
 	"github.com/HMasataka/gate/internal/handler"
+	"github.com/HMasataka/gate/internal/infra/crypto"
+	"github.com/HMasataka/gate/internal/infra/mailer"
 	"github.com/HMasataka/gate/internal/infra/postgres"
 	redisclient "github.com/HMasataka/gate/internal/infra/redis"
 	"github.com/HMasataka/gate/internal/middleware"
+	"github.com/HMasataka/gate/internal/usecase"
 )
 
 func main() {
@@ -61,16 +64,27 @@ func run() error {
 	}
 	defer rdb.Close()
 
-	// 7. ミドルウェア初期化
+	// 7. インフラ層初期化
+	hasher := crypto.NewArgon2Hasher(cfg.Argon2)
+	random := &crypto.SecureRandom{}
+	sessionStore := redisclient.NewSessionStore(rdb, cfg.Session)
+	mail := mailer.NewStdoutMailer()
+	userRepo := postgres.NewUserRepo(db)
+
+	// 8. ユースケース初期化
+	authUsecase := usecase.NewAuthUsecase(userRepo, hasher, mail, sessionStore, random, cfg.Auth, cfg.Session)
+
+	// 9. ミドルウェア初期化
 	mw := middleware.New(cfg)
 
-	// 8. ハンドラ初期化
+	// 10. ハンドラ初期化
 	healthHandler := handler.NewHealthHandler(db, rdb)
+	authHandler := handler.NewAuthHandler(authUsecase)
 
-	// 9. ルーター構築
-	router := handler.NewRouter(healthHandler, mw)
+	// 11. ルーター構築
+	router := handler.NewRouter(healthHandler, authHandler, mw)
 
-	// 10. HTTP サーバー起動
+	// 12. HTTP サーバー起動
 	srv := &http.Server{
 		Addr:              fmt.Sprintf(":%d", cfg.Server.Port),
 		Handler:           router,
@@ -89,7 +103,7 @@ func run() error {
 		close(errCh)
 	}()
 
-	// 11. グレースフルシャットダウン
+	// 13. グレースフルシャットダウン
 	select {
 	case err := <-errCh:
 		return fmt.Errorf("server error: %w", err)
