@@ -3,6 +3,7 @@ package handler
 import (
 	"encoding/json"
 	"errors"
+	"log/slog"
 	"net/http"
 
 	"github.com/HMasataka/gate/internal/domain"
@@ -70,6 +71,7 @@ func HandleError(w http.ResponseWriter, err error) {
 	case errors.Is(err, domain.ErrPasswordTooLong):
 		Error(w, http.StatusBadRequest, "invalid_password", "password is too long")
 	default:
+		slog.Error("unhandled error", slog.Any("error", err))
 		Error(w, http.StatusInternalServerError, "internal_error", "internal server error")
 	}
 }
