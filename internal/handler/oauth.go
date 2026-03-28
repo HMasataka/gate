@@ -2,6 +2,7 @@ package handler
 
 import (
 	"errors"
+	"log/slog"
 	"net/http"
 	"net/url"
 	"strings"
@@ -11,12 +12,15 @@ import (
 )
 
 type OAuthHandler struct {
-	oauth *usecase.OAuthUsecase
-	token *usecase.TokenUsecase
+	oauth        *usecase.OAuthUsecase
+	token        *usecase.TokenUsecase
+	auth         *usecase.AuthUsecase
+	sessions     domain.SessionStore
+	httpsEnabled bool
 }
 
-func NewOAuthHandler(oauth *usecase.OAuthUsecase, token *usecase.TokenUsecase) *OAuthHandler {
-	return &OAuthHandler{oauth: oauth, token: token}
+func NewOAuthHandler(oauth *usecase.OAuthUsecase, token *usecase.TokenUsecase, auth *usecase.AuthUsecase, sessions domain.SessionStore, httpsEnabled bool) *OAuthHandler {
+	return &OAuthHandler{oauth: oauth, token: token, auth: auth, sessions: sessions, httpsEnabled: httpsEnabled}
 }
 
 // Authorize handles GET /oauth/authorize
@@ -40,8 +44,22 @@ func (h *OAuthHandler) Authorize(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	code, err := h.oauth.Authorize(r.Context(), clientID, redirectURI, responseType, scope, state, codeChallenge, codeChallengeMethod)
+	sessionID := getSessionCookie(r)
+	if sessionID == "" {
+		redirectToLogin(w, r)
+		return
+	}
+
+	session, err := h.sessions.Get(r.Context(), sessionID)
 	if err != nil {
+		clearSessionCookie(w)
+		redirectToLogin(w, r)
+		return
+	}
+
+	code, err := h.oauth.Authorize(r.Context(), session.UserID, clientID, redirectURI, responseType, scope, state, codeChallenge, codeChallengeMethod)
+	if err != nil {
+		slog.Error("oauth authorize failed", slog.Any("error", err), slog.String("client_id", clientID))
 		errCode := "server_error"
 		errDesc := "internal server error"
 		switch {
