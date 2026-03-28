@@ -14,6 +14,7 @@ type OAuthClient struct {
 	Secret          string
 	Name            string
 	Type            ClientType
+	OwnerID         string
 	RedirectURIs    []string
 	AllowedScopes   []string
 	TokensRevokedAt *time.Time

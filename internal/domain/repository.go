@@ -22,6 +22,7 @@ type OAuthClientRepository interface {
 	Update(ctx context.Context, client *OAuthClient) error
 	Delete(ctx context.Context, id string) error
 	List(ctx context.Context, offset, limit int) ([]OAuthClient, int, error)
+	ListByOwner(ctx context.Context, ownerID string, offset, limit int) ([]OAuthClient, int, error)
 }
 
 type RoleRepository interface {

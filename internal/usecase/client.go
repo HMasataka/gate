@@ -142,6 +142,146 @@ func (u *ClientUsecase) RotateSecret(ctx context.Context, id string) (*domain.OA
 	return client, nil
 }
 
+func (u *ClientUsecase) RegisterForUser(
+	ctx context.Context,
+	ownerID, name, clientType string,
+	redirectURIs, scopes, grantTypes []string,
+) (*domain.OAuthClient, error) {
+	if len(redirectURIs) > u.oauthCfg.MaxRedirectURIs {
+		return nil, domain.ErrInvalidRedirectURI
+	}
+
+	for _, uri := range redirectURIs {
+		if !isAllowedRedirectURI(uri) {
+			return nil, domain.ErrInvalidRedirectURI
+		}
+	}
+
+	clientID := u.random.GenerateUUID()
+
+	rawSecret, err := u.random.GenerateToken(32)
+	if err != nil {
+		return nil, err
+	}
+
+	hashedSecret := sha256hex(rawSecret)
+
+	now := time.Now()
+
+	client := &domain.OAuthClient{
+		ID:            clientID,
+		Secret:        hashedSecret,
+		Name:          name,
+		Type:          domain.ClientType(clientType),
+		OwnerID:       ownerID,
+		RedirectURIs:  redirectURIs,
+		AllowedScopes: scopes,
+		CreatedAt:     now,
+		UpdatedAt:     now,
+	}
+
+	if err := u.clientRepo.Create(ctx, client); err != nil {
+		return nil, err
+	}
+
+	client.Secret = rawSecret
+
+	return client, nil
+}
+
+func (u *ClientUsecase) ListByOwner(ctx context.Context, ownerID string, offset, limit int) ([]domain.OAuthClient, int, error) {
+	return u.clientRepo.ListByOwner(ctx, ownerID, offset, limit)
+}
+
+func (u *ClientUsecase) GetOwned(ctx context.Context, ownerID, clientID string) (*domain.OAuthClient, error) {
+	client, err := u.clientRepo.GetByID(ctx, clientID)
+	if err != nil {
+		return nil, err
+	}
+
+	if client.OwnerID != ownerID {
+		return nil, domain.ErrForbidden
+	}
+
+	return client, nil
+}
+
+func (u *ClientUsecase) UpdateOwned(
+	ctx context.Context,
+	ownerID, clientID, name string,
+	redirectURIs, scopes []string,
+) (*domain.OAuthClient, error) {
+	client, err := u.clientRepo.GetByID(ctx, clientID)
+	if err != nil {
+		return nil, err
+	}
+
+	if client.OwnerID != ownerID {
+		return nil, domain.ErrForbidden
+	}
+
+	if len(redirectURIs) > u.oauthCfg.MaxRedirectURIs {
+		return nil, domain.ErrInvalidRedirectURI
+	}
+
+	for _, uri := range redirectURIs {
+		if !isAllowedRedirectURI(uri) {
+			return nil, domain.ErrInvalidRedirectURI
+		}
+	}
+
+	client.Name = name
+	client.RedirectURIs = redirectURIs
+	client.AllowedScopes = scopes
+	client.UpdatedAt = time.Now()
+
+	if err := u.clientRepo.Update(ctx, client); err != nil {
+		return nil, err
+	}
+
+	return client, nil
+}
+
+func (u *ClientUsecase) DeleteOwned(ctx context.Context, ownerID, clientID string) error {
+	client, err := u.clientRepo.GetByID(ctx, clientID)
+	if err != nil {
+		return err
+	}
+
+	if client.OwnerID != ownerID {
+		return domain.ErrForbidden
+	}
+
+	return u.clientRepo.Delete(ctx, clientID)
+}
+
+func (u *ClientUsecase) RotateSecretOwned(ctx context.Context, ownerID, clientID string) (*domain.OAuthClient, error) {
+	client, err := u.clientRepo.GetByID(ctx, clientID)
+	if err != nil {
+		return nil, err
+	}
+
+	if client.OwnerID != ownerID {
+		return nil, domain.ErrForbidden
+	}
+
+	rawSecret, err := u.random.GenerateToken(32)
+	if err != nil {
+		return nil, err
+	}
+
+	client.Secret = sha256hex(rawSecret)
+	client.UpdatedAt = time.Now()
+
+	if err := u.clientRepo.Update(ctx, client); err != nil {
+		return nil, err
+	}
+
+	client.Secret = rawSecret
+
+	return client, nil
+}
+
 // isAllowedRedirectURI returns true for https:// URIs and http://localhost URIs.
 func isAllowedRedirectURI(uri string) bool {
 	if strings.HasPrefix(uri, "https://") {

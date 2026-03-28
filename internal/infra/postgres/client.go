@@ -31,6 +31,7 @@ type clientRow struct {
 	Secret          string         `db:"secret"`
 	Name            string         `db:"name"`
 	Type            string         `db:"type"`
+	OwnerID         sql.NullString `db:"owner_id"`
 	RedirectURIs    pq.StringArray `db:"redirect_uris"`
 	AllowedScopes   pq.StringArray `db:"allowed_scopes"`
 	TokensRevokedAt sql.NullTime   `db:"tokens_revoked_at"`
@@ -44,6 +45,7 @@ func (r *clientRow) toDomain() *domain.OAuthClient {
 		Secret:        r.Secret,
 		Name:          r.Name,
 		Type:          domain.ClientType(r.Type),
+		OwnerID:       r.OwnerID.String,
 		RedirectURIs:  []string(r.RedirectURIs),
 		AllowedScopes: []string(r.AllowedScopes),
 		CreatedAt:     r.CreatedAt,
@@ -61,11 +63,11 @@ func (r *clientRow) toDomain() *domain.OAuthClient {
 func (repo *ClientRepo) Create(ctx context.Context, client *domain.OAuthClient) error {
 	const q = `
 INSERT INTO oauth_clients (
-	id, secret, name, type,
+	id, secret, name, type, owner_id,
 	redirect_uris, allowed_scopes,
 	tokens_revoked_at
 ) VALUES (
-	:id, :secret, :name, :type,
+	:id, :secret, :name, :type, :owner_id,
 	:redirect_uris, :allowed_scopes,
 	:tokens_revoked_at
 )
@@ -76,6 +78,7 @@ RETURNING id, created_at, updated_at`
 		Secret:        client.Secret,
 		Name:          client.Name,
 		Type:          string(client.Type),
+		OwnerID:       sql.NullString{String: client.OwnerID, Valid: client.OwnerID != ""},
 		RedirectURIs:  pq.StringArray(client.RedirectURIs),
 		AllowedScopes: pq.StringArray(client.AllowedScopes),
 	}
@@ -113,7 +116,7 @@ RETURNING id, created_at, updated_at`
 
 func (repo *ClientRepo) GetByID(ctx context.Context, id string) (*domain.OAuthClient, error) {
 	const q = `
-SELECT id, secret, name, type,
+SELECT id, secret, name, type, owner_id,
 	redirect_uris, allowed_scopes,
 	tokens_revoked_at, created_at, updated_at
 FROM oauth_clients
@@ -136,6 +139,7 @@ UPDATE oauth_clients SET
 	secret           = :secret,
 	name             = :name,
 	type             = :type,
+	owner_id         = :owner_id,
 	redirect_uris    = :redirect_uris,
 	allowed_scopes   = :allowed_scopes,
 	tokens_revoked_at = :tokens_revoked_at,
@@ -147,6 +151,7 @@ WHERE id = :id`
 		Secret:        client.Secret,
 		Name:          client.Name,
 		Type:          string(client.Type),
+		OwnerID:       sql.NullString{String: client.OwnerID, Valid: client.OwnerID != ""},
 		RedirectURIs:  pq.StringArray(client.RedirectURIs),
 		AllowedScopes: pq.StringArray(client.AllowedScopes),
 	}
@@ -205,7 +210,7 @@ func (repo *ClientRepo) List(ctx context.Context, offset, limit int) ([]domain.O
 	}
 
 	const q = `
-SELECT id, secret, name, type,
+SELECT id, secret, name, type, owner_id,
 	redirect_uris, allowed_scopes,
 	tokens_revoked_at, created_at, updated_at
 FROM oauth_clients
@@ -215,6 +220,36 @@ LIMIT $1 OFFSET $2`
 	var rows []clientRow
 	if err := repo.ext(ctx).SelectContext(ctx, &rows, q, limit, offset); err != nil {
 		return nil, 0, fmt.Errorf("list clients: %w", err)
+	}
+
+	clients := make([]domain.OAuthClient, len(rows))
+	for i, r := range rows {
+		clients[i] = *r.toDomain()
+	}
+
+	return clients, total, nil
+}
+
+func (repo *ClientRepo) ListByOwner(ctx context.Context, ownerID string, offset, limit int) ([]domain.OAuthClient, int, error) {
+	const countQ = `SELECT COUNT(*) FROM oauth_clients WHERE owner_id = $1`
+
+	var total int
+	if err := repo.ext(ctx).QueryRowContext(ctx, countQ, ownerID).Scan(&total); err != nil {
+		return nil, 0, fmt.Errorf("count clients by owner: %w", err)
+	}
+
+	const q = `
+SELECT id, secret, name, type, owner_id,
+	redirect_uris, allowed_scopes,
+	tokens_revoked_at, created_at, updated_at
+FROM oauth_clients
+WHERE owner_id = $1
+ORDER BY created_at DESC
+LIMIT $2 OFFSET $3`
+
+	var rows []clientRow
+	if err := repo.ext(ctx).SelectContext(ctx, &rows, q, ownerID, limit, offset); err != nil {
+		return nil, 0, fmt.Errorf("list clients by owner: %w", err)
 	}
 
 	clients := make([]domain.OAuthClient, len(rows))

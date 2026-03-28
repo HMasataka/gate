@@ -181,7 +181,7 @@
 
         try {
           const res = await fetch(
-            `${API_BASE}/api/v1/admin/clients/${currentRotateClientId}/rotate-secret`,
+            `${API_BASE}/api/v1/clients/${currentRotateClientId}/rotate-secret`,
             {
               method: "POST",
               headers: authHeaders(),
@@ -283,7 +283,7 @@
 
       async function loadClients() {
         try {
-          const res = await fetch(`${API_BASE}/api/v1/admin/clients`, {
+          const res = await fetch(`${API_BASE}/api/v1/clients`, {
             headers: authHeaders(),
           });
 

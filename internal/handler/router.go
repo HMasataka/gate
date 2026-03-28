@@ -16,6 +16,7 @@ func NewRouter(
 	authHandler *AuthHandler,
 	oauthHandler *OAuthHandler,
 	mfaHandler *MFAHandler,
+	clientHandler *ClientHandler,
 	adminClientHandler *AdminClientHandler,
 	adminRoleHandler *AdminRoleHandler,
 	adminUserHandler *AdminUserHandler,
@@ -97,6 +98,19 @@ func NewRouter(
 			r.Post("/totp/confirm", mfaHandler.ConfirmTOTP)
 			r.Delete("/totp", mfaHandler.DisableTOTP)
 			r.Post("/recovery-codes/regenerate", mfaHandler.RegenerateRecoveryCodes)
+		})
+
+		// ユーザー向けクライアント管理 (JWT 認証必須)
+		r.Route("/clients", func(r chi.Router) {
+			r.Use(middleware.JWTAuth(jwtManager))
+			r.Get("/", clientHandler.List)
+			r.Post("/", clientHandler.Create)
+			r.Route("/{id}", func(r chi.Router) {
+				r.Get("/", clientHandler.Get)
+				r.Put("/", clientHandler.Update)
+				r.Delete("/", clientHandler.Delete)
+				r.Post("/rotate-secret", clientHandler.RotateSecret)
+			})
 		})
 
 		// 管理者エンドポイント (JWT 認証必須)

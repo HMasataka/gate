@@ -16,6 +16,9 @@
           <div class="dash-logo">gate</div>
           <nav class="dash-nav">
             <a href="#" class="dash-nav-item active">Overview</a>
+            <a href="../client-portal/index.html" class="dash-nav-item"
+              >My Applications</a
+            >
             <a href="#" class="dash-nav-item">Sessions</a>
             <a href="#" class="dash-nav-item">Security</a>
           </nav>
@@ -184,9 +187,7 @@
             const now = new Date();
             const diffMin = Math.round((exp - now) / 60000);
             document.getElementById("token-expiry").textContent =
-              diffMin > 0
-                ? `Expires in ${diffMin} minutes`
-                : "Expired";
+              diffMin > 0 ? `Expires in ${diffMin} minutes` : "Expired";
           }
         } catch (e) {
           // ignore decode errors
