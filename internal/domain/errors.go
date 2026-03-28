@@ -31,4 +31,5 @@ var (
 	ErrCodeReuse           = errors.New("authorization code reuse detected")
 	ErrPasswordTooShort    = errors.New("password too short")
 	ErrPasswordTooLong     = errors.New("password too long")
+	ErrSessionRequired     = errors.New("session required")
 )
