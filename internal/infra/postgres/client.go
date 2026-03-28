@@ -79,8 +79,8 @@ RETURNING id, created_at, updated_at`
 		Name:          client.Name,
 		Type:          string(client.Type),
 		OwnerID:       sql.NullString{String: client.OwnerID, Valid: client.OwnerID != ""},
-		RedirectURIs:  pq.StringArray(client.RedirectURIs),
-		AllowedScopes: pq.StringArray(client.AllowedScopes),
+		RedirectURIs:  pq.StringArray(append([]string{}, client.RedirectURIs...)),
+		AllowedScopes: pq.StringArray(append([]string{}, client.AllowedScopes...)),
 	}
 
 	if client.TokensRevokedAt != nil {
@@ -152,8 +152,8 @@ WHERE id = :id`
 		Name:          client.Name,
 		Type:          string(client.Type),
 		OwnerID:       sql.NullString{String: client.OwnerID, Valid: client.OwnerID != ""},
-		RedirectURIs:  pq.StringArray(client.RedirectURIs),
-		AllowedScopes: pq.StringArray(client.AllowedScopes),
+		RedirectURIs:  pq.StringArray(append([]string{}, client.RedirectURIs...)),
+		AllowedScopes: pq.StringArray(append([]string{}, client.AllowedScopes...)),
 	}
 
 	if client.TokensRevokedAt != nil {
