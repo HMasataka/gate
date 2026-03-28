@@ -85,6 +85,8 @@ func NewRouter(
 		// OAuth 2.0 エンドポイント
 		r.Route("/oauth", func(r chi.Router) {
 			r.Get("/authorize", oauthHandler.Authorize)
+			r.Get("/login", oauthHandler.LoginPage)
+			r.With(middleware.RateLimit(limiter, 10, time.Minute)).Post("/login", oauthHandler.LoginSubmit)
 			// OAuth トークン: 20 req/min per IP
 			r.With(middleware.RateLimit(limiter, 20, time.Minute)).Post("/token", oauthHandler.Token)
 			r.Post("/revoke", oauthHandler.Revoke)

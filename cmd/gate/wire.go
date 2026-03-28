@@ -95,7 +95,7 @@ func initApp(ctx context.Context, cfg *config.Config) (*app, error) {
 
 	healthHandler := handler.NewHealthHandler(db, rdb)
 	authHandler := handler.NewAuthHandler(authUsecase)
-	oauthHandler := handler.NewOAuthHandler(oauthUsecase, tokenUsecase)
+	oauthHandler := handler.NewOAuthHandler(oauthUsecase, tokenUsecase, authUsecase, sessionStore, cfg.RateLimit.HTTPSRedirect)
 	mfaHandler := handler.NewMFAHandler(mfaUsecase, hasher)
 	clientHandler := handler.NewClientHandler(clientUsecase)
 	adminClientHandler := handler.NewAdminClientHandler(clientUsecase)
