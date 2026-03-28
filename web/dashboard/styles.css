@@ -1,0 +1,328 @@
+/* ── Dashboard Layout ────────────────────────────────────────────────────── */
+
+.dashboard {
+  min-height: 100vh;
+  display: grid;
+  grid-template-rows: auto 1fr;
+}
+
+/* ── Header ──────────────────────────────────────────────────────────────── */
+
+.dash-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 32px;
+  height: 52px;
+  background-color: var(--bg-1);
+  border-bottom: 1px solid var(--border);
+}
+
+.dash-header-left {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.dash-logo {
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--amber);
+  letter-spacing: -1px;
+}
+
+.dash-nav {
+  display: flex;
+  gap: 4px;
+}
+
+.dash-nav-item {
+  padding: 6px 12px;
+  font-size: 12px;
+  color: var(--text-secondary);
+  border-radius: var(--radius);
+  text-decoration: none;
+  transition: var(--transition);
+}
+
+.dash-nav-item:hover {
+  color: var(--text-primary);
+  background-color: var(--bg-2);
+  text-decoration: none;
+}
+
+.dash-nav-item.active {
+  color: var(--amber);
+  background-color: var(--amber-glow);
+}
+
+.dash-header-right {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.dash-user {
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+/* ── Main Content ────────────────────────────────────────────────────────── */
+
+.dash-main {
+  padding: 32px;
+  max-width: 960px;
+  width: 100%;
+  margin: 0 auto;
+}
+
+.dash-greeting {
+  margin-bottom: 32px;
+}
+
+.dash-greeting h1 {
+  font-size: 22px;
+  font-weight: 500;
+  margin-bottom: 4px;
+}
+
+.dash-greeting p {
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+/* ── Stats Row ───────────────────────────────────────────────────────────── */
+
+.dash-stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+  margin-bottom: 32px;
+}
+
+.stat-card {
+  background-color: var(--bg-1);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 20px;
+  transition: border-color var(--transition);
+}
+
+.stat-card:hover {
+  border-color: var(--border-bright);
+}
+
+.stat-label {
+  font-size: 11px;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 8px;
+}
+
+.stat-value {
+  font-size: 28px;
+  font-weight: 300;
+  color: var(--text-primary);
+  line-height: 1;
+}
+
+.stat-value.amber {
+  color: var(--amber);
+}
+
+/* ── Section ─────────────────────────────────────────────────────────────── */
+
+.dash-section {
+  margin-bottom: 32px;
+}
+
+.dash-section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.dash-section-title {
+  font-size: 14px;
+  font-weight: 500;
+}
+
+/* ── Session List ────────────────────────────────────────────────────────── */
+
+.session-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  background-color: var(--border);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+}
+
+.session-item {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  gap: 16px;
+  align-items: center;
+  padding: 14px 20px;
+  background-color: var(--bg-1);
+  transition: background-color var(--transition);
+}
+
+.session-item:hover {
+  background-color: var(--bg-2);
+}
+
+.session-indicator {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background-color: var(--text-muted);
+}
+
+.session-indicator.current {
+  background-color: var(--success);
+  box-shadow: 0 0 6px rgba(56, 161, 105, 0.4);
+}
+
+.session-info {
+  min-width: 0;
+}
+
+.session-agent {
+  font-size: 12px;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.session-meta {
+  display: flex;
+  gap: 12px;
+  margin-top: 2px;
+}
+
+.session-meta span {
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.session-actions {
+  display: flex;
+  gap: 8px;
+}
+
+/* ── Token Info ──────────────────────────────────────────────────────────── */
+
+.token-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+.token-card {
+  background-color: var(--bg-1);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 20px;
+}
+
+.token-card-label {
+  font-size: 11px;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 10px;
+}
+
+.token-preview {
+  font-size: 11px;
+  color: var(--text-secondary);
+  word-break: break-all;
+  line-height: 1.8;
+  background-color: var(--bg-0);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 10px 12px;
+  max-height: 60px;
+  overflow: hidden;
+}
+
+.token-expiry {
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-top: 8px;
+}
+
+/* ── Account Info ────────────────────────────────────────────────────────── */
+
+.account-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 16px;
+}
+
+.account-field {
+  background-color: var(--bg-1);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 16px 20px;
+}
+
+.account-field-label {
+  font-size: 11px;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 4px;
+}
+
+.account-field-value {
+  font-size: 13px;
+  color: var(--text-primary);
+}
+
+/* ── Quick Actions ───────────────────────────────────────────────────────── */
+
+.quick-actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+/* ── Responsive ──────────────────────────────────────────────────────────── */
+
+@media (max-width: 768px) {
+  .dash-header {
+    padding: 0 16px;
+  }
+
+  .dash-main {
+    padding: 20px 16px;
+  }
+
+  .dash-stats {
+    grid-template-columns: 1fr;
+  }
+
+  .token-grid,
+  .account-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .dash-nav {
+    display: none;
+  }
+
+  .session-item {
+    grid-template-columns: auto 1fr;
+  }
+
+  .session-actions {
+    grid-column: 1 / -1;
+    justify-content: flex-end;
+  }
+}
