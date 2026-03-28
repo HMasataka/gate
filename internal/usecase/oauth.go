@@ -45,8 +45,12 @@ func NewOAuthUsecase(
 
 func (u *OAuthUsecase) Authorize(
 	ctx context.Context,
-	clientID, redirectURI, responseType, scope, state, codeChallenge, codeChallengeMethod string,
+	userID, clientID, redirectURI, responseType, scope, state, codeChallenge, codeChallengeMethod string,
 ) (string, error) {
+	if userID == "" {
+		return "", domain.ErrSessionRequired
+	}
+
 	client, err := u.clientRepo.GetByID(ctx, clientID)
 	if err != nil {
 		return "", domain.ErrInvalidClient
@@ -77,7 +81,7 @@ func (u *OAuthUsecase) Authorize(
 		ID:                  u.random.GenerateUUID(),
 		Code:                codeHash,
 		ClientID:            clientID,
-		UserID:              "",
+		UserID:              userID,
 		RedirectURI:         redirectURI,
 		Scopes:              scopes,
 		CodeChallenge:       codeChallenge,
@@ -102,8 +106,10 @@ func (u *OAuthUsecase) ExchangeCode(
 		return "", "", domain.ErrInvalidClient
 	}
 
-	if client.Secret != sha256hex(clientSecret) {
-		return "", "", domain.ErrInvalidClient
+	if client.Type == domain.ClientTypeConfidential {
+		if clientSecret == "" || client.Secret != sha256hex(clientSecret) {
+			return "", "", domain.ErrInvalidClient
+		}
 	}
 
 	codeHash := sha256hex(code)
