@@ -95,15 +95,16 @@ func initApp(ctx context.Context, cfg *config.Config) (*app, error) {
 
 	healthHandler := handler.NewHealthHandler(db, rdb)
 	authHandler := handler.NewAuthHandler(authUsecase)
-	oauthHandler := handler.NewOAuthHandler(oauthUsecase, tokenUsecase)
+	oauthHandler := handler.NewOAuthHandler(oauthUsecase, tokenUsecase, authUsecase, sessionStore, cfg.RateLimit.HTTPSRedirect)
 	mfaHandler := handler.NewMFAHandler(mfaUsecase, hasher)
+	clientHandler := handler.NewClientHandler(clientUsecase)
 	adminClientHandler := handler.NewAdminClientHandler(clientUsecase)
 	adminRoleHandler := handler.NewAdminRoleHandler(roleUsecase, permUsecase)
 	adminUserHandler := handler.NewAdminUserHandler(userUsecase, auditUsecase)
 	oidcHandler := handler.NewOIDCHandler(oidcUsecase)
 	socialHandler := handler.NewSocialHandler(socialUsecase)
 
-	router := handler.NewRouter(healthHandler, authHandler, oauthHandler, mfaHandler, adminClientHandler, adminRoleHandler, adminUserHandler, oidcHandler, socialHandler, jwtManager, mw, rateLimiter, cfg.RateLimit.HTTPSRedirect)
+	router := handler.NewRouter(healthHandler, authHandler, oauthHandler, mfaHandler, clientHandler, adminClientHandler, adminRoleHandler, adminUserHandler, oidcHandler, socialHandler, jwtManager, mw, rateLimiter, cfg.RateLimit.HTTPSRedirect)
 
 	cleanup := func() {
 		rdb.Close()

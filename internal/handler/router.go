@@ -16,6 +16,7 @@ func NewRouter(
 	authHandler *AuthHandler,
 	oauthHandler *OAuthHandler,
 	mfaHandler *MFAHandler,
+	clientHandler *ClientHandler,
 	adminClientHandler *AdminClientHandler,
 	adminRoleHandler *AdminRoleHandler,
 	adminUserHandler *AdminUserHandler,
@@ -84,6 +85,8 @@ func NewRouter(
 		// OAuth 2.0 エンドポイント
 		r.Route("/oauth", func(r chi.Router) {
 			r.Get("/authorize", oauthHandler.Authorize)
+			r.Get("/login", oauthHandler.LoginPage)
+			r.With(middleware.RateLimit(limiter, 10, time.Minute)).Post("/login", oauthHandler.LoginSubmit)
 			// OAuth トークン: 20 req/min per IP
 			r.With(middleware.RateLimit(limiter, 20, time.Minute)).Post("/token", oauthHandler.Token)
 			r.Post("/revoke", oauthHandler.Revoke)
@@ -97,6 +100,19 @@ func NewRouter(
 			r.Post("/totp/confirm", mfaHandler.ConfirmTOTP)
 			r.Delete("/totp", mfaHandler.DisableTOTP)
 			r.Post("/recovery-codes/regenerate", mfaHandler.RegenerateRecoveryCodes)
+		})
+
+		// ユーザー向けクライアント管理 (JWT 認証必須)
+		r.Route("/clients", func(r chi.Router) {
+			r.Use(middleware.JWTAuth(jwtManager))
+			r.Get("/", clientHandler.List)
+			r.Post("/", clientHandler.Create)
+			r.Route("/{id}", func(r chi.Router) {
+				r.Get("/", clientHandler.Get)
+				r.Put("/", clientHandler.Update)
+				r.Delete("/", clientHandler.Delete)
+				r.Post("/rotate-secret", clientHandler.RotateSecret)
+			})
 		})
 
 		// 管理者エンドポイント (JWT 認証必須)

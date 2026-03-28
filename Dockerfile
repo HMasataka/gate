@@ -6,6 +6,7 @@ COPY . .
 RUN CGO_ENABLED=0 GOOS=linux go build -o /gate ./cmd/gate
 
 FROM gcr.io/distroless/static-debian12:nonroot
+WORKDIR /
 COPY --from=builder /gate /gate
 COPY migrations/ /migrations/
 EXPOSE 8080

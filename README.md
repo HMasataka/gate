@@ -132,6 +132,63 @@ go build -o gate ./cmd/gate
 
 詳細は [`api/openapi.yaml`](api/openapi.yaml) を参照してください。
 
+## Web UI
+
+gate は 3 つの React (Vite) フロントエンドアプリを提供します。
+
+| アプリ     | ディレクトリ      | 用途                                                                            |
+| ---------- | ----------------- | ------------------------------------------------------------------------------- |
+| Portal     | `web/portal/`     | 一般ユーザー用 — ログイン・登録・ダッシュボード・OAuth クライアント管理         |
+| Admin      | `web/admin/`      | gate 管理者用 — ユーザー管理・クライアント管理・ロール/パーミッション・監査ログ |
+| Sample App | `web/sample-app/` | OAuth 2.0 PKCE フローのデモアプリ                                               |
+
+### フロントエンド起動
+
+```bash
+# API サーバー起動
+docker compose up
+
+# 各アプリを起動（別ターミナルで）
+cd web/portal && pnpm install && pnpm dev
+cd web/admin && pnpm install && pnpm dev
+cd web/sample-app && pnpm install && pnpm dev
+```
+
+各アプリの API 呼び出しは Vite の proxy 設定で `localhost:8080` に自動転送されます。
+
+### OAuth 2.0 デモ (Sample App) の使い方
+
+Sample App は gate の OAuth 2.0 Authorization Code + PKCE フローを体験するためのデモアプリです。Google ログインと同じ標準的な認可フローを再現します。
+
+#### 1. ユーザー登録
+
+Portal (`http://localhost:5173/portal/register`) でユーザーを登録し、ログインします。
+
+#### 2. OAuth クライアント登録
+
+Portal の「My Applications」→「Register New」でクライアントを登録します。
+
+| 項目         | 値                                                          |
+| ------------ | ----------------------------------------------------------- |
+| Name         | 任意（例: Sample App）                                      |
+| Client Type  | public                                                      |
+| Redirect URI | `http://localhost:<sample-appのポート>/sample-app/callback` |
+| Scopes       | openid, email                                               |
+| Grant Types  | authorization_code                                          |
+
+登録後に表示される **Client ID** をコピーしてください。
+
+#### 3. Sample App でログイン
+
+Sample App (`http://localhost:<ポート>/sample-app/`) を開き、Client ID を入力して「Login with gate」をクリックします。
+
+#### 4. 認可フロー
+
+1. gate の認可エンドポイントにリダイレクトされます
+2. gate のログイン画面が表示されるので、手順 1 で登録した email/password でログインします
+3. ログイン成功後、認可コードが発行され Sample App に戻ります
+4. Sample App がトークン交換を行い、ダッシュボードにユーザー情報が表示されます
+
 ## アーキテクチャ
 
 Clean Architecture に基づく 4 レイヤー構成。依存方向は外側から内側のみ。

@@ -2,20 +2,25 @@ package handler
 
 import (
 	"errors"
+	"log/slog"
 	"net/http"
 	"net/url"
+	"strings"
 
 	"github.com/HMasataka/gate/internal/domain"
 	"github.com/HMasataka/gate/internal/usecase"
 )
 
 type OAuthHandler struct {
-	oauth *usecase.OAuthUsecase
-	token *usecase.TokenUsecase
+	oauth        *usecase.OAuthUsecase
+	token        *usecase.TokenUsecase
+	auth         *usecase.AuthUsecase
+	sessions     domain.SessionStore
+	httpsEnabled bool
 }
 
-func NewOAuthHandler(oauth *usecase.OAuthUsecase, token *usecase.TokenUsecase) *OAuthHandler {
-	return &OAuthHandler{oauth: oauth, token: token}
+func NewOAuthHandler(oauth *usecase.OAuthUsecase, token *usecase.TokenUsecase, auth *usecase.AuthUsecase, sessions domain.SessionStore, httpsEnabled bool) *OAuthHandler {
+	return &OAuthHandler{oauth: oauth, token: token, auth: auth, sessions: sessions, httpsEnabled: httpsEnabled}
 }
 
 // Authorize handles GET /oauth/authorize
@@ -39,8 +44,22 @@ func (h *OAuthHandler) Authorize(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	code, err := h.oauth.Authorize(r.Context(), clientID, redirectURI, responseType, scope, state, codeChallenge, codeChallengeMethod)
+	sessionID := getSessionCookie(r)
+	if sessionID == "" {
+		redirectToLogin(w, r)
+		return
+	}
+
+	session, err := h.sessions.Get(r.Context(), sessionID)
 	if err != nil {
+		clearSessionCookie(w)
+		redirectToLogin(w, r)
+		return
+	}
+
+	code, err := h.oauth.Authorize(r.Context(), session.UserID, clientID, redirectURI, responseType, scope, state, codeChallenge, codeChallengeMethod)
+	if err != nil {
+		slog.Error("oauth authorize failed", slog.Any("error", err), slog.String("client_id", clientID))
 		errCode := "server_error"
 		errDesc := "internal server error"
 		switch {
@@ -93,9 +112,26 @@ type oauthTokenRequest struct {
 // Token handles POST /oauth/token
 func (h *OAuthHandler) Token(w http.ResponseWriter, r *http.Request) {
 	var req oauthTokenRequest
-	if err := DecodeJSON(r, &req); err != nil {
-		Error(w, http.StatusBadRequest, "invalid_request", "invalid request body")
-		return
+
+	ct := r.Header.Get("Content-Type")
+	if strings.HasPrefix(ct, "application/x-www-form-urlencoded") {
+		if err := r.ParseForm(); err != nil {
+			Error(w, http.StatusBadRequest, "invalid_request", "invalid request body")
+			return
+		}
+		req.GrantType = r.PostFormValue("grant_type")
+		req.Code = r.PostFormValue("code")
+		req.RedirectURI = r.PostFormValue("redirect_uri")
+		req.ClientID = r.PostFormValue("client_id")
+		req.ClientSecret = r.PostFormValue("client_secret")
+		req.CodeVerifier = r.PostFormValue("code_verifier")
+		req.RefreshToken = r.PostFormValue("refresh_token")
+		req.Scope = r.PostFormValue("scope")
+	} else {
+		if err := DecodeJSON(r, &req); err != nil {
+			Error(w, http.StatusBadRequest, "invalid_request", "invalid request body")
+			return
+		}
 	}
 
 	switch req.GrantType {
