@@ -4,6 +4,7 @@ import (
 	"errors"
 	"net/http"
 	"net/url"
+	"strings"
 
 	"github.com/HMasataka/gate/internal/domain"
 	"github.com/HMasataka/gate/internal/usecase"
@@ -93,9 +94,26 @@ type oauthTokenRequest struct {
 // Token handles POST /oauth/token
 func (h *OAuthHandler) Token(w http.ResponseWriter, r *http.Request) {
 	var req oauthTokenRequest
-	if err := DecodeJSON(r, &req); err != nil {
-		Error(w, http.StatusBadRequest, "invalid_request", "invalid request body")
-		return
+
+	ct := r.Header.Get("Content-Type")
+	if strings.HasPrefix(ct, "application/x-www-form-urlencoded") {
+		if err := r.ParseForm(); err != nil {
+			Error(w, http.StatusBadRequest, "invalid_request", "invalid request body")
+			return
+		}
+		req.GrantType = r.PostFormValue("grant_type")
+		req.Code = r.PostFormValue("code")
+		req.RedirectURI = r.PostFormValue("redirect_uri")
+		req.ClientID = r.PostFormValue("client_id")
+		req.ClientSecret = r.PostFormValue("client_secret")
+		req.CodeVerifier = r.PostFormValue("code_verifier")
+		req.RefreshToken = r.PostFormValue("refresh_token")
+		req.Scope = r.PostFormValue("scope")
+	} else {
+		if err := DecodeJSON(r, &req); err != nil {
+			Error(w, http.StatusBadRequest, "invalid_request", "invalid request body")
+			return
+		}
 	}
 
 	switch req.GrantType {
