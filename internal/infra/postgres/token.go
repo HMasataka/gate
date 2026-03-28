@@ -29,7 +29,7 @@ type refreshTokenRow struct {
 	ID        string         `db:"id"`
 	TokenHash string         `db:"token_hash"`
 	UserID    string         `db:"user_id"`
-	ClientID  string         `db:"client_id"`
+	ClientID  sql.NullString `db:"client_id"`
 	FamilyID  string         `db:"family_id"`
 	Scopes    pq.StringArray `db:"scopes"`
 	ExpiresAt time.Time      `db:"expires_at"`
@@ -42,7 +42,7 @@ func (r *refreshTokenRow) toDomain() *domain.RefreshToken {
 		ID:        r.ID,
 		TokenHash: r.TokenHash,
 		UserID:    r.UserID,
-		ClientID:  r.ClientID,
+		ClientID:  r.ClientID.String,
 		FamilyID:  r.FamilyID,
 		Scopes:    []string(r.Scopes),
 		ExpiresAt: r.ExpiresAt,
@@ -72,9 +72,9 @@ RETURNING id, created_at`
 		ID:        token.ID,
 		TokenHash: token.TokenHash,
 		UserID:    token.UserID,
-		ClientID:  token.ClientID,
+		ClientID:  sql.NullString{String: token.ClientID, Valid: token.ClientID != ""},
 		FamilyID:  token.FamilyID,
-		Scopes:    pq.StringArray(token.Scopes),
+		Scopes:    pq.StringArray(append([]string{}, token.Scopes...)),
 		ExpiresAt: token.ExpiresAt,
 	}
 
