@@ -1,3 +1,4 @@
+const CLIENT_ID_KEY = "sample_client_id";
 const ACCESS_TOKEN_KEY = "sample_access_token";
 const REFRESH_TOKEN_KEY = "sample_refresh_token";
 const PKCE_VERIFIER_KEY = "sample_pkce_verifier";
@@ -47,4 +48,12 @@ export function getOAuthState(): string | null {
 export function clearPkceState(): void {
   sessionStorage.removeItem(PKCE_VERIFIER_KEY);
   sessionStorage.removeItem(OAUTH_STATE_KEY);
+}
+
+export function getClientId(): string | null {
+  return localStorage.getItem(CLIENT_ID_KEY);
+}
+
+export function setClientId(clientId: string): void {
+  localStorage.setItem(CLIENT_ID_KEY, clientId);
 }

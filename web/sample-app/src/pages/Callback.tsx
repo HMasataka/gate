@@ -1,9 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
-import { getOAuthState, getPkceVerifier, clearPkceState, setToken, setRefreshToken } from "../lib/auth";
+import { getOAuthState, getPkceVerifier, clearPkceState, setToken, setRefreshToken, getClientId } from "../lib/auth";
 import { tokenExchange } from "../lib/api";
-
-const CLIENT_ID = "sample-client";
 
 export default function Callback() {
   const [error, setError] = useState<string | null>(null);
@@ -43,6 +41,12 @@ export default function Callback() {
         return;
       }
 
+      const clientId = getClientId();
+      if (!clientId) {
+        setError("Missing Client ID. Please try logging in again.");
+        return;
+      }
+
       const redirectUri = window.location.origin + "/sample-app/callback";
 
       try {
@@ -50,7 +54,7 @@ export default function Callback() {
           grant_type: "authorization_code",
           code: code,
           redirect_uri: redirectUri,
-          client_id: CLIENT_ID,
+          client_id: clientId,
           code_verifier: codeVerifier,
         });
 
