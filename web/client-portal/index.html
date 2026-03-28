@@ -1,0 +1,329 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>My Applications - gate</title>
+    <link rel="stylesheet" href="../shared/variables.css" />
+    <link rel="stylesheet" href="../shared/shell.css" />
+    <link rel="stylesheet" href="../shared/components.css" />
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <div class="portal-layout">
+      <nav class="portal-nav">
+        <a class="portal-nav-logo" href="./index.html"
+          ><span>gate</span> / clients</a
+        >
+        <div class="portal-nav-links">
+          <a class="portal-nav-link active" href="./index.html">My Clients</a>
+          <a class="portal-nav-link" href="./register.html">+ Register New</a>
+        </div>
+        <div class="portal-nav-right">
+          <span class="portal-user" id="user-email"></span>
+          <button class="btn btn-ghost btn-sm" onclick="signOut()">
+            Sign out
+          </button>
+        </div>
+      </nav>
+
+      <div class="portal-content">
+        <div class="portal-header">
+          <h1>My Applications</h1>
+          <p>OAuth clients registered under your account.</p>
+        </div>
+
+        <div id="loading-state" class="empty-state">
+          <p>Loading clients...</p>
+        </div>
+
+        <div id="empty-state" class="empty-state hidden">
+          <h3>No applications yet</h3>
+          <p>Register your first OAuth client to get started.</p>
+          <br />
+          <a href="./register.html" class="btn btn-primary"
+            >Register a client</a
+          >
+        </div>
+
+        <div class="clients-grid" id="clients-grid"></div>
+      </div>
+    </div>
+
+    <div class="modal-overlay hidden" id="rotate-modal">
+      <div class="modal">
+        <div class="modal-header">
+          <span class="modal-title">Rotate Client Secret</span>
+          <button class="modal-close" onclick="closeRotateModal()">x</button>
+        </div>
+        <div id="rotate-modal-content">
+          <p
+            style="
+              font-size: 12px;
+              color: var(--text-secondary);
+              margin-bottom: 16px;
+            "
+          >
+            A new client secret will be generated. The previous secret will be
+            immediately invalidated.
+          </p>
+          <div id="rotate-secret-display" class="hidden">
+            <div class="alert alert-warning" style="margin-bottom: 16px">
+              Save this secret now. It will not be shown again.
+            </div>
+            <div class="credential-group">
+              <div class="credential-label">New Client Secret</div>
+              <div class="secret-box" id="new-secret-value">
+                <button
+                  class="btn btn-secondary btn-sm copy-btn"
+                  onclick="copyText('new-secret-value')"
+                >
+                  Copy
+                </button>
+                <span></span>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-secondary" onclick="closeRotateModal()">
+            Close
+          </button>
+          <button
+            class="btn btn-danger"
+            id="rotate-confirm-btn"
+            onclick="confirmRotateSecret()"
+          >
+            Rotate Secret
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <div class="toast-container" id="toast-container"></div>
+
+    <script>
+      const API_BASE = "http://localhost:8080";
+
+      function getToken() {
+        return localStorage.getItem("access_token");
+      }
+
+      function authHeaders() {
+        return {
+          Authorization: "Bearer " + getToken(),
+          "Content-Type": "application/json",
+        };
+      }
+
+      function signOut() {
+        localStorage.removeItem("access_token");
+        localStorage.removeItem("user_email");
+        window.location.href = "../auth/login.html";
+      }
+
+      function showToast(message, type = "success") {
+        const container = document.getElementById("toast-container");
+        const toast = document.createElement("div");
+        toast.className = `toast ${type}`;
+        toast.textContent = message;
+        container.appendChild(toast);
+        setTimeout(() => toast.remove(), 3000);
+      }
+
+      function copyText(elementId) {
+        const el = document.getElementById(elementId);
+        const text = el.querySelector("span")
+          ? el.querySelector("span").textContent
+          : el.textContent;
+        navigator.clipboard
+          .writeText(text)
+          .then(() => {
+            showToast("Copied to clipboard.");
+          })
+          .catch(() => {
+            const ta = document.createElement("textarea");
+            ta.value = text;
+            document.body.appendChild(ta);
+            ta.select();
+            document.execCommand("copy");
+            document.body.removeChild(ta);
+            showToast("Copied to clipboard.");
+          });
+      }
+
+      let currentRotateClientId = null;
+
+      function openRotateModal(clientId) {
+        currentRotateClientId = clientId;
+        document
+          .getElementById("rotate-secret-display")
+          .classList.add("hidden");
+        document
+          .getElementById("rotate-confirm-btn")
+          .classList.remove("hidden");
+        document.getElementById("rotate-confirm-btn").disabled = false;
+        document.getElementById("rotate-confirm-btn").textContent =
+          "Rotate Secret";
+        document.getElementById("rotate-modal").classList.remove("hidden");
+      }
+
+      function closeRotateModal() {
+        document.getElementById("rotate-modal").classList.add("hidden");
+        currentRotateClientId = null;
+      }
+
+      async function confirmRotateSecret() {
+        if (!currentRotateClientId) return;
+        const btn = document.getElementById("rotate-confirm-btn");
+        btn.disabled = true;
+        btn.textContent = "Rotating...";
+
+        try {
+          const res = await fetch(
+            `${API_BASE}/api/v1/admin/clients/${currentRotateClientId}/rotate-secret`,
+            {
+              method: "POST",
+              headers: authHeaders(),
+            },
+          );
+
+          if (res.status === 401) {
+            signOut();
+            return;
+          }
+          const data = await res.json().catch(() => ({}));
+
+          if (!res.ok) {
+            showToast(data.message || "Failed to rotate secret.", "error");
+            btn.disabled = false;
+            btn.textContent = "Rotate Secret";
+            return;
+          }
+
+          const secretEl = document.querySelector("#new-secret-value span");
+          secretEl.textContent = data.client_secret || data.secret || "";
+          document
+            .getElementById("rotate-secret-display")
+            .classList.remove("hidden");
+          btn.classList.add("hidden");
+          showToast("Secret rotated successfully.");
+        } catch (err) {
+          showToast("Network error.", "error");
+          btn.disabled = false;
+          btn.textContent = "Rotate Secret";
+        }
+      }
+
+      function renderClients(clients) {
+        const grid = document.getElementById("clients-grid");
+        grid.innerHTML = "";
+
+        if (!clients || clients.length === 0) {
+          document.getElementById("empty-state").classList.remove("hidden");
+          return;
+        }
+
+        clients.forEach((client) => {
+          const card = document.createElement("div");
+          card.className = "client-card";
+
+          const typeClass =
+            client.client_type === "public" ? "badge-gray" : "badge-amber";
+          const typeLabel = client.client_type || "confidential";
+          const redirectURI =
+            client.redirect_uris && client.redirect_uris.length > 0
+              ? client.redirect_uris[0]
+              : "-";
+          const createdAt = client.created_at
+            ? new Date(client.created_at).toLocaleDateString()
+            : "-";
+          const clientIdShort =
+            (client.client_id || "").substring(0, 24) + "...";
+
+          card.innerHTML = `
+          <div class="client-card-header">
+            <div>
+              <div class="client-name">${escapeHtml(client.name || client.client_name || "Unnamed")}</div>
+              <div class="client-id">${escapeHtml(client.client_id || "")}</div>
+            </div>
+            <span class="badge ${typeClass}">${escapeHtml(typeLabel)}</span>
+          </div>
+          <div class="client-meta">
+            <div class="client-meta-row">
+              <span class="client-meta-label">Redirect URI</span>
+              <span class="client-meta-value">${escapeHtml(redirectURI)}</span>
+            </div>
+            <div class="client-meta-row">
+              <span class="client-meta-label">Created</span>
+              <span class="client-meta-value">${createdAt}</span>
+            </div>
+            <div class="client-meta-row">
+              <span class="client-meta-label">Redirect URIs</span>
+              <span class="client-meta-value">${(client.redirect_uris || []).length}</span>
+            </div>
+          </div>
+          <div class="client-actions">
+            <a href="./register.html?view=${encodeURIComponent(client.client_id)}" class="btn btn-secondary btn-sm">View</a>
+            <button class="btn btn-ghost btn-sm" onclick="openRotateModal('${escapeHtml(client.client_id)}')">Rotate Secret</button>
+          </div>
+        `;
+          grid.appendChild(card);
+        });
+      }
+
+      function escapeHtml(str) {
+        if (!str) return "";
+        return String(str)
+          .replace(/&/g, "&amp;")
+          .replace(/</g, "&lt;")
+          .replace(/>/g, "&gt;")
+          .replace(/"/g, "&quot;");
+      }
+
+      async function loadClients() {
+        try {
+          const res = await fetch(`${API_BASE}/api/v1/admin/clients`, {
+            headers: authHeaders(),
+          });
+
+          if (res.status === 401) {
+            signOut();
+            return;
+          }
+          const data = await res.json().catch(() => ({}));
+
+          document.getElementById("loading-state").classList.add("hidden");
+
+          if (!res.ok) {
+            showToast(data.message || "Failed to load clients.", "error");
+            return;
+          }
+
+          const clients = Array.isArray(data)
+            ? data
+            : data.clients || data.data || [];
+          renderClients(clients);
+        } catch (err) {
+          document.getElementById("loading-state").classList.add("hidden");
+          showToast("Network error loading clients.", "error");
+        }
+      }
+
+      function init() {
+        const token = getToken();
+        if (!token) {
+          window.location.href = "../auth/login.html";
+          return;
+        }
+
+        const email = localStorage.getItem("user_email") || "";
+        document.getElementById("user-email").textContent = email;
+
+        loadClients();
+      }
+
+      init();
+    </script>
+  </body>
+</html>

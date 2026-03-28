@@ -1,0 +1,377 @@
+/* ── Portal layout ───────────────────────────────────────────────────────── */
+
+.portal-layout {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.portal-nav {
+  background-color: var(--bg-1);
+  border-bottom: 1px solid var(--border);
+  padding: 0 32px;
+  height: 56px;
+  display: flex;
+  align-items: center;
+  gap: 32px;
+}
+
+.portal-nav-logo {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text-primary);
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.portal-nav-logo span {
+  color: var(--amber);
+}
+
+.portal-nav-links {
+  display: flex;
+  gap: 4px;
+  flex: 1;
+}
+
+.portal-nav-link {
+  padding: 6px 12px;
+  font-size: 12px;
+  color: var(--text-secondary);
+  text-decoration: none;
+  border-radius: var(--radius);
+  transition: var(--transition);
+  font-family: var(--font);
+}
+
+.portal-nav-link:hover {
+  background-color: var(--bg-2);
+  color: var(--text-primary);
+  text-decoration: none;
+}
+
+.portal-nav-link.active {
+  color: var(--text-primary);
+  background-color: var(--bg-2);
+}
+
+.portal-nav-right {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.portal-user {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.portal-content {
+  flex: 1;
+  padding: 40px 48px;
+}
+
+.portal-header {
+  margin-bottom: 32px;
+}
+
+.portal-header h1 {
+  font-size: 22px;
+  font-weight: 500;
+}
+
+.portal-header p {
+  color: var(--text-secondary);
+  margin-top: 6px;
+  font-size: 12px;
+}
+
+/* ── Client grid ─────────────────────────────────────────────────────────── */
+
+.clients-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+  gap: 16px;
+}
+
+.client-card {
+  background-color: var(--bg-1);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 20px;
+  transition: var(--transition);
+}
+
+.client-card:hover {
+  border-color: var(--border-bright);
+}
+
+.client-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 12px;
+}
+
+.client-name {
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.client-id {
+  font-family: var(--font);
+  font-size: 11px;
+  color: var(--text-secondary);
+  margin-top: 4px;
+  word-break: break-all;
+}
+
+.client-meta {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.client-meta-row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 11px;
+}
+
+.client-meta-label {
+  color: var(--text-muted);
+}
+
+.client-meta-value {
+  color: var(--text-secondary);
+  font-family: var(--font);
+  max-width: 200px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  text-align: right;
+}
+
+.client-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 16px;
+}
+
+/* ── Wizard ──────────────────────────────────────────────────────────────── */
+
+.wizard-container {
+  max-width: 560px;
+  margin: 0 auto;
+}
+
+.wizard-steps {
+  display: flex;
+  gap: 0;
+  margin-bottom: 40px;
+  position: relative;
+}
+
+.wizard-steps::before {
+  content: "";
+  position: absolute;
+  top: 14px;
+  left: 14px;
+  right: 14px;
+  height: 1px;
+  background-color: var(--border);
+  z-index: 0;
+}
+
+.wizard-step {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  position: relative;
+  z-index: 1;
+}
+
+.step-number {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 500;
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+  background-color: var(--bg-0);
+  transition: var(--transition);
+}
+
+.wizard-step.active .step-number {
+  background-color: var(--amber);
+  color: var(--bg-0);
+  border-color: var(--amber);
+}
+
+.wizard-step.done .step-number {
+  background-color: rgba(56, 161, 105, 0.2);
+  color: var(--success);
+  border-color: var(--success);
+}
+
+.step-label {
+  font-size: 11px;
+  color: var(--text-muted);
+  text-align: center;
+}
+
+.wizard-step.active .step-label {
+  color: var(--text-primary);
+}
+
+.wizard-step.done .step-label {
+  color: var(--success);
+}
+
+.wizard-panel {
+  display: none;
+}
+
+.wizard-panel.active {
+  display: block;
+}
+
+.wizard-actions {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 32px;
+}
+
+.wizard-actions .right {
+  display: flex;
+  gap: 8px;
+}
+
+/* ── Radio group ─────────────────────────────────────────────────────────── */
+
+.radio-group {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.radio-option {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 14px 16px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  cursor: pointer;
+  transition: var(--transition);
+}
+
+.radio-option:hover {
+  border-color: var(--border-bright);
+  background-color: var(--bg-2);
+}
+
+.radio-option input[type="radio"] {
+  margin-top: 2px;
+  accent-color: var(--amber);
+}
+
+.radio-option-label {
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.radio-option-desc {
+  font-size: 11px;
+  color: var(--text-secondary);
+  margin-top: 2px;
+  line-height: 1.6;
+}
+
+/* ── Checkbox group ──────────────────────────────────────────────────────── */
+
+.checkbox-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.checkbox-option {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  cursor: pointer;
+  transition: var(--transition);
+  font-size: 12px;
+}
+
+.checkbox-option:hover {
+  border-color: var(--border-bright);
+  background-color: var(--bg-2);
+}
+
+.checkbox-option input[type="checkbox"] {
+  accent-color: var(--amber);
+}
+
+.checkbox-option-desc {
+  color: var(--text-secondary);
+  font-size: 11px;
+  margin-left: auto;
+}
+
+/* ── Success screen ──────────────────────────────────────────────────────── */
+
+.success-screen {
+  text-align: center;
+  padding: 32px 0;
+}
+
+.success-icon {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background-color: rgba(56, 161, 105, 0.15);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 16px;
+  font-size: 24px;
+}
+
+.success-title {
+  font-size: 18px;
+  font-weight: 500;
+  margin-bottom: 8px;
+}
+
+.success-subtitle {
+  color: var(--text-secondary);
+  font-size: 12px;
+  margin-bottom: 28px;
+}
+
+.credential-group {
+  margin-bottom: 16px;
+  text-align: left;
+}
+
+.credential-label {
+  font-size: 11px;
+  color: var(--text-secondary);
+  margin-bottom: 6px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}

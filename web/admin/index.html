@@ -1,0 +1,1699 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>gate — admin</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:ital,wght@0,300;0,400;0,500;0,600;1,400&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      *,
+      *::before,
+      *::after {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+
+      :root {
+        --bg: #080b0f;
+        --surface: #0f1318;
+        --surface-2: #161c24;
+        --border: #1e2530;
+        --border-2: #2a3040;
+        --text: #b8c4d0;
+        --text-bright: #d8e4f0;
+        --text-muted: #5a6a7a;
+        --accent: #f0b429;
+        --accent-hover: #ffd060;
+        --accent-dim: rgba(240, 180, 41, 0.1);
+        --danger: #e5534b;
+        --danger-dim: rgba(229, 83, 75, 0.1);
+        --success: #3fb950;
+        --info: #58a6ff;
+        --font: "IBM Plex Mono", monospace;
+        --sidebar: 220px;
+      }
+
+      html,
+      body {
+        height: 100%;
+        background: var(--bg);
+        color: var(--text);
+        font-family: var(--font);
+        font-size: 13px;
+        line-height: 1.6;
+        -webkit-font-smoothing: antialiased;
+      }
+
+      /* ── Layout ──────────────────────────────── */
+
+      #page-login {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 100vh;
+        background: var(--bg);
+        background-image:
+          linear-gradient(rgba(240, 180, 41, 0.03) 1px, transparent 1px),
+          linear-gradient(90deg, rgba(240, 180, 41, 0.03) 1px, transparent 1px);
+        background-size: 40px 40px;
+      }
+
+      #page-app {
+        display: flex;
+        min-height: 100vh;
+      }
+
+      /* ── Sidebar ─────────────────────────────── */
+
+      #sidebar {
+        width: var(--sidebar);
+        min-height: 100vh;
+        background: var(--surface);
+        border-right: 1px solid var(--border);
+        display: flex;
+        flex-direction: column;
+        flex-shrink: 0;
+      }
+
+      .s-logo {
+        padding: 24px 20px 20px;
+        border-bottom: 1px solid var(--border);
+      }
+      .s-logo-mark {
+        font-size: 18px;
+        font-weight: 600;
+        color: var(--accent);
+        letter-spacing: -0.5px;
+      }
+      .s-logo-sub {
+        font-size: 10px;
+        color: var(--text-muted);
+        letter-spacing: 2px;
+        text-transform: uppercase;
+        margin-top: 2px;
+      }
+
+      .s-nav {
+        flex: 1;
+        padding: 12px 0;
+      }
+
+      .s-section {
+        padding: 12px 20px 4px;
+        font-size: 10px;
+        color: var(--text-muted);
+        letter-spacing: 1.5px;
+        text-transform: uppercase;
+      }
+
+      .s-item {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 8px 20px;
+        color: var(--text-muted);
+        font-size: 13px;
+        cursor: pointer;
+        border-left: 2px solid transparent;
+        transition: all 0.15s;
+      }
+      .s-item:hover {
+        color: var(--text);
+        background: rgba(255, 255, 255, 0.03);
+      }
+      .s-item.active {
+        color: var(--accent);
+        border-left-color: var(--accent);
+        background: var(--accent-dim);
+      }
+      .s-item.disabled {
+        opacity: 0.35;
+        cursor: not-allowed;
+        pointer-events: none;
+      }
+      .s-item .ico {
+        width: 16px;
+        text-align: center;
+        font-style: normal;
+        font-size: 12px;
+      }
+
+      .s-footer {
+        padding: 16px 20px;
+        border-top: 1px solid var(--border);
+      }
+      .logout-btn {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        background: none;
+        border: none;
+        color: var(--text-muted);
+        font-family: var(--font);
+        font-size: 12px;
+        cursor: pointer;
+        padding: 4px 0;
+        transition: color 0.15s;
+      }
+      .logout-btn:hover {
+        color: var(--danger);
+      }
+
+      /* ── Main ────────────────────────────────── */
+
+      #main {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+      }
+
+      .ph {
+        padding: 20px 32px;
+        border-bottom: 1px solid var(--border);
+        background: var(--surface);
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+      }
+      .ph-title {
+        font-size: 14px;
+        font-weight: 500;
+        color: var(--text-bright);
+        letter-spacing: 0.5px;
+      }
+      .ph-path {
+        font-size: 11px;
+        color: var(--text-muted);
+        margin-top: 2px;
+      }
+
+      .pc {
+        flex: 1;
+        padding: 28px 32px;
+        overflow-y: auto;
+      }
+
+      /* ── Buttons ─────────────────────────────── */
+
+      .btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 7px 14px;
+        font-family: var(--font);
+        font-size: 12px;
+        font-weight: 500;
+        border-radius: 4px;
+        border: 1px solid transparent;
+        cursor: pointer;
+        text-decoration: none;
+        white-space: nowrap;
+        transition: all 0.15s;
+      }
+      .btn-primary {
+        background: var(--accent);
+        color: #080b0f;
+        border-color: var(--accent);
+      }
+      .btn-primary:hover {
+        background: var(--accent-hover);
+        border-color: var(--accent-hover);
+      }
+      .btn-ghost {
+        background: transparent;
+        color: var(--text-muted);
+        border-color: var(--border-2);
+      }
+      .btn-ghost:hover {
+        color: var(--text);
+        background: rgba(255, 255, 255, 0.04);
+      }
+      .btn-danger {
+        background: transparent;
+        color: var(--danger);
+        border-color: rgba(229, 83, 75, 0.3);
+      }
+      .btn-danger:hover {
+        background: var(--danger-dim);
+      }
+      .btn-sm {
+        padding: 4px 10px;
+        font-size: 11px;
+      }
+      .btn:disabled {
+        opacity: 0.4;
+        cursor: not-allowed;
+      }
+
+      /* ── Table ───────────────────────────────── */
+
+      .table-wrap {
+        border: 1px solid var(--border);
+        border-radius: 6px;
+        overflow: hidden;
+      }
+      table {
+        width: 100%;
+        border-collapse: collapse;
+      }
+      thead {
+        background: var(--surface);
+        border-bottom: 1px solid var(--border);
+      }
+      th {
+        padding: 10px 16px;
+        text-align: left;
+        font-size: 10px;
+        font-weight: 500;
+        color: var(--text-muted);
+        letter-spacing: 1px;
+        text-transform: uppercase;
+      }
+      tbody tr {
+        border-bottom: 1px solid var(--border);
+        transition: background 0.1s;
+      }
+      tbody tr:last-child {
+        border-bottom: none;
+      }
+      tbody tr:hover {
+        background: rgba(255, 255, 255, 0.02);
+      }
+      td {
+        padding: 12px 16px;
+        font-size: 12px;
+        color: var(--text);
+        vertical-align: middle;
+      }
+
+      .td-id {
+        font-size: 11px;
+        color: var(--text-muted);
+        max-width: 120px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+      .td-actions {
+        display: flex;
+        gap: 6px;
+        align-items: center;
+      }
+
+      /* ── Badge ───────────────────────────────── */
+
+      .badge {
+        display: inline-block;
+        padding: 2px 8px;
+        border-radius: 3px;
+        font-size: 10px;
+        font-weight: 500;
+        letter-spacing: 0.5px;
+        text-transform: uppercase;
+      }
+      .badge-confidential {
+        background: rgba(88, 166, 255, 0.1);
+        color: var(--info);
+        border: 1px solid rgba(88, 166, 255, 0.2);
+      }
+      .badge-public {
+        background: rgba(63, 185, 80, 0.1);
+        color: var(--success);
+        border: 1px solid rgba(63, 185, 80, 0.2);
+      }
+
+      /* ── Scope tags ──────────────────────────── */
+
+      .scope-list {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 4px;
+      }
+      .scope-tag {
+        display: inline-block;
+        padding: 1px 6px;
+        background: var(--accent-dim);
+        border: 1px solid rgba(240, 180, 41, 0.2);
+        color: var(--accent);
+        border-radius: 3px;
+        font-size: 10px;
+      }
+
+      /* ── Form ────────────────────────────────── */
+
+      .fg {
+        margin-bottom: 18px;
+      }
+      label.lbl {
+        display: block;
+        font-size: 11px;
+        color: var(--text-muted);
+        letter-spacing: 0.8px;
+        text-transform: uppercase;
+        margin-bottom: 6px;
+      }
+      input[type="text"],
+      input[type="email"],
+      input[type="password"],
+      textarea,
+      select {
+        width: 100%;
+        background: var(--surface);
+        border: 1px solid var(--border-2);
+        border-radius: 4px;
+        color: var(--text-bright);
+        font-family: var(--font);
+        font-size: 13px;
+        padding: 9px 12px;
+        outline: none;
+        transition: border-color 0.15s;
+      }
+      input:focus,
+      textarea:focus,
+      select:focus {
+        border-color: var(--accent);
+        box-shadow: 0 0 0 3px var(--accent-dim);
+      }
+      textarea {
+        min-height: 80px;
+        resize: vertical;
+        line-height: 1.5;
+      }
+      .field-hint {
+        font-size: 11px;
+        color: var(--text-muted);
+        margin-top: 4px;
+      }
+
+      /* ── Radio / Checkbox ────────────────────── */
+
+      .radio-group {
+        display: flex;
+        gap: 10px;
+      }
+      .radio-opt {
+        flex: 1;
+        display: flex;
+        align-items: flex-start;
+        gap: 8px;
+        padding: 10px 14px;
+        border: 1px solid var(--border-2);
+        border-radius: 4px;
+        cursor: pointer;
+        transition: all 0.15s;
+      }
+      .radio-opt:hover {
+        border-color: var(--accent);
+        background: var(--accent-dim);
+      }
+      .radio-opt.sel {
+        border-color: var(--accent);
+        background: var(--accent-dim);
+        color: var(--accent);
+      }
+      .radio-opt input {
+        display: none;
+      }
+      .radio-lbl {
+        font-size: 12px;
+        font-weight: 500;
+      }
+      .radio-desc {
+        font-size: 10px;
+        color: var(--text-muted);
+        margin-top: 2px;
+      }
+
+      .cb-group {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+      }
+      .cb-item {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        padding: 5px 10px;
+        border: 1px solid var(--border-2);
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 12px;
+        transition: all 0.15s;
+      }
+      .cb-item:hover {
+        border-color: var(--accent);
+      }
+      .cb-item.chk {
+        border-color: var(--accent);
+        background: var(--accent-dim);
+        color: var(--accent);
+      }
+      .cb-item input {
+        display: none;
+      }
+
+      /* ── Panel (slide-in) ────────────────────── */
+
+      .backdrop {
+        position: fixed;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.6);
+        backdrop-filter: blur(4px);
+        z-index: 100;
+        display: flex;
+        align-items: flex-start;
+        justify-content: flex-end;
+      }
+      .panel {
+        width: 480px;
+        height: 100vh;
+        background: var(--surface);
+        border-left: 1px solid var(--border);
+        display: flex;
+        flex-direction: column;
+        animation: slideIn 0.2s ease;
+      }
+      @keyframes slideIn {
+        from {
+          transform: translateX(100%);
+        }
+        to {
+          transform: translateX(0);
+        }
+      }
+
+      .panel-hd {
+        padding: 20px 24px;
+        border-bottom: 1px solid var(--border);
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+      }
+      .panel-title {
+        font-size: 13px;
+        font-weight: 500;
+        color: var(--text-bright);
+      }
+      .panel-close {
+        background: none;
+        border: none;
+        color: var(--text-muted);
+        cursor: pointer;
+        font-size: 14px;
+        padding: 4px 8px;
+        border-radius: 4px;
+        font-family: var(--font);
+        transition: all 0.15s;
+      }
+      .panel-close:hover {
+        background: rgba(255, 255, 255, 0.05);
+        color: var(--text);
+      }
+      .panel-body {
+        flex: 1;
+        padding: 24px;
+        overflow-y: auto;
+      }
+      .panel-ft {
+        padding: 16px 24px;
+        border-top: 1px solid var(--border);
+        display: flex;
+        gap: 8px;
+        justify-content: flex-end;
+      }
+
+      /* ── Confirm dialog ──────────────────────── */
+
+      .dlg-wrap {
+        position: fixed;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.65);
+        backdrop-filter: blur(4px);
+        z-index: 200;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+      .dlg {
+        background: var(--surface);
+        border: 1px solid var(--border-2);
+        border-radius: 8px;
+        padding: 28px;
+        width: 380px;
+        box-shadow: 0 16px 48px rgba(0, 0, 0, 0.5);
+      }
+      .dlg-title {
+        font-size: 14px;
+        font-weight: 500;
+        color: var(--text-bright);
+        margin-bottom: 8px;
+      }
+      .dlg-desc {
+        font-size: 12px;
+        color: var(--text-muted);
+        margin-bottom: 20px;
+        line-height: 1.6;
+      }
+      .dlg-ft {
+        display: flex;
+        gap: 8px;
+        justify-content: flex-end;
+      }
+
+      /* ── Alert ───────────────────────────────── */
+
+      .alert {
+        padding: 10px 14px;
+        border-radius: 4px;
+        font-size: 12px;
+        margin-bottom: 16px;
+        display: flex;
+        align-items: flex-start;
+        gap: 8px;
+        line-height: 1.5;
+      }
+      .alert-error {
+        background: var(--danger-dim);
+        border: 1px solid rgba(229, 83, 75, 0.3);
+        color: var(--danger);
+      }
+      .alert-success {
+        background: rgba(63, 185, 80, 0.08);
+        border: 1px solid rgba(63, 185, 80, 0.3);
+        color: var(--success);
+      }
+      .alert-info {
+        background: rgba(88, 166, 255, 0.08);
+        border: 1px solid rgba(88, 166, 255, 0.2);
+        color: var(--info);
+      }
+
+      /* ── Secret box ──────────────────────────── */
+
+      .secret-box {
+        background: var(--surface-2);
+        border: 1px solid var(--border-2);
+        border-radius: 4px;
+        padding: 12px;
+        font-size: 12px;
+        word-break: break-all;
+        color: var(--accent);
+        font-family: var(--font);
+        margin: 8px 0;
+      }
+      .copy-btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        background: none;
+        border: 1px solid var(--border-2);
+        color: var(--text-muted);
+        padding: 4px 10px;
+        border-radius: 3px;
+        font-family: var(--font);
+        font-size: 11px;
+        cursor: pointer;
+        transition: all 0.15s;
+        margin-top: 6px;
+      }
+      .copy-btn:hover {
+        color: var(--text);
+      }
+
+      /* ── Stats cards ─────────────────────────── */
+
+      .stats-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 16px;
+        margin-bottom: 28px;
+      }
+      .stat-card {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: 6px;
+        padding: 20px;
+      }
+      .stat-lbl {
+        font-size: 10px;
+        color: var(--text-muted);
+        letter-spacing: 1px;
+        text-transform: uppercase;
+        margin-bottom: 8px;
+      }
+      .stat-val {
+        font-size: 28px;
+        font-weight: 600;
+        color: var(--text-bright);
+        line-height: 1;
+      }
+      .stat-sub {
+        font-size: 11px;
+        color: var(--text-muted);
+        margin-top: 4px;
+      }
+
+      /* ── Nav cards ───────────────────────────── */
+
+      .nav-cards {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+        gap: 16px;
+      }
+      .nav-card {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: 6px;
+        padding: 20px;
+        cursor: pointer;
+        text-decoration: none;
+        color: inherit;
+        transition: all 0.15s;
+        display: block;
+      }
+      .nav-card:hover {
+        border-color: var(--accent);
+        background: var(--surface-2);
+      }
+      .nav-card.dis {
+        opacity: 0.38;
+        cursor: not-allowed;
+        pointer-events: none;
+      }
+      .nc-icon {
+        font-size: 20px;
+        margin-bottom: 10px;
+      }
+      .nc-title {
+        font-size: 13px;
+        font-weight: 500;
+        color: var(--text-bright);
+        margin-bottom: 4px;
+      }
+      .nc-desc {
+        font-size: 11px;
+        color: var(--text-muted);
+        line-height: 1.5;
+      }
+
+      /* ── Detail rows ─────────────────────────── */
+
+      .det-row {
+        display: flex;
+        gap: 12px;
+        padding: 12px 0;
+        border-bottom: 1px solid var(--border);
+      }
+      .det-row:last-child {
+        border-bottom: none;
+      }
+      .det-k {
+        width: 120px;
+        flex-shrink: 0;
+        font-size: 11px;
+        color: var(--text-muted);
+        padding-top: 1px;
+      }
+      .det-v {
+        flex: 1;
+        font-size: 12px;
+        word-break: break-all;
+      }
+
+      /* ── Toast ───────────────────────────────── */
+
+      #toast {
+        position: fixed;
+        bottom: 24px;
+        right: 24px;
+        z-index: 300;
+        max-width: 320px;
+      }
+      .toast {
+        background: var(--surface-2);
+        border: 1px solid var(--border-2);
+        border-radius: 6px;
+        padding: 11px 16px;
+        font-size: 12px;
+        margin-top: 8px;
+        animation: toastIn 0.2s ease;
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+      }
+      @keyframes toastIn {
+        from {
+          opacity: 0;
+          transform: translateY(8px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+      .toast.err {
+        border-color: rgba(229, 83, 75, 0.4);
+        color: var(--danger);
+      }
+      .toast.ok {
+        border-color: rgba(63, 185, 80, 0.4);
+        color: var(--success);
+      }
+
+      /* ── Empty state ─────────────────────────── */
+
+      .empty {
+        text-align: center;
+        padding: 48px 24px;
+        color: var(--text-muted);
+      }
+      .empty-ico {
+        font-size: 28px;
+        margin-bottom: 10px;
+        opacity: 0.4;
+      }
+      .empty-title {
+        font-size: 13px;
+        color: var(--text);
+        margin-bottom: 4px;
+      }
+
+      /* ── Spinner ─────────────────────────────── */
+
+      .spin {
+        display: inline-block;
+        width: 16px;
+        height: 16px;
+        border: 2px solid rgba(240, 180, 41, 0.2);
+        border-top-color: var(--accent);
+        border-radius: 50%;
+        animation: rot 0.7s linear infinite;
+      }
+      @keyframes rot {
+        to {
+          transform: rotate(360deg);
+        }
+      }
+
+      /* ── Login ───────────────────────────────── */
+
+      .login-box {
+        width: 360px;
+      }
+      .login-hd {
+        margin-bottom: 32px;
+      }
+      .login-logo {
+        font-size: 24px;
+        font-weight: 600;
+        color: var(--accent);
+        letter-spacing: -1px;
+      }
+      .login-sub {
+        font-size: 10px;
+        color: var(--text-muted);
+        letter-spacing: 2px;
+        text-transform: uppercase;
+        margin-top: 4px;
+      }
+      .login-form {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        padding: 28px;
+      }
+
+      /* ── Pagination ──────────────────────────── */
+
+      .pgn {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin-top: 16px;
+        justify-content: flex-end;
+      }
+      .pgn-info {
+        font-size: 11px;
+        color: var(--text-muted);
+      }
+
+      /* ── Section title ───────────────────────── */
+
+      .sec-title {
+        font-size: 10px;
+        color: var(--text-muted);
+        letter-spacing: 1px;
+        text-transform: uppercase;
+        margin-bottom: 12px;
+      }
+
+      /* ── Utils ───────────────────────────────── */
+      .hidden {
+        display: none !important;
+      }
+      .mt-12 {
+        margin-top: 12px;
+      }
+      .mb-16 {
+        margin-bottom: 16px;
+      }
+      .flex {
+        display: flex;
+      }
+      .items-center {
+        align-items: center;
+      }
+      .justify-between {
+        justify-content: space-between;
+      }
+      .gap-8 {
+        gap: 8px;
+      }
+      .text-muted {
+        color: var(--text-muted);
+      }
+      .text-accent {
+        color: var(--accent);
+      }
+      .text-bright {
+        color: var(--text-bright);
+      }
+    </style>
+  </head>
+  <body>
+    <!-- ── Login ─────────────────────────────────── -->
+    <div id="page-login" class="hidden">
+      <div class="login-box">
+        <div class="login-hd">
+          <div class="login-logo">gate</div>
+          <div class="login-sub">Administration Console</div>
+        </div>
+        <div class="login-form">
+          <div id="login-err" class="alert alert-error hidden"></div>
+          <div class="fg">
+            <label class="lbl">Email</label>
+            <input
+              type="email"
+              id="inp-email"
+              placeholder="admin@example.com"
+              autocomplete="email"
+            />
+          </div>
+          <div class="fg">
+            <label class="lbl">Password</label>
+            <input
+              type="password"
+              id="inp-pw"
+              placeholder="••••••••"
+              autocomplete="current-password"
+            />
+          </div>
+          <button
+            class="btn btn-primary"
+            style="width: 100%; justify-content: center"
+            id="login-btn"
+            onclick="doLogin()"
+          >
+            Sign in
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── Authenticated shell ──────────────────── -->
+    <div id="page-app" class="hidden">
+      <!-- Sidebar -->
+      <aside id="sidebar">
+        <div class="s-logo">
+          <div class="s-logo-mark">gate</div>
+          <div class="s-logo-sub">Admin Console</div>
+        </div>
+        <nav class="s-nav">
+          <div class="s-section">Navigation</div>
+          <div
+            class="s-item"
+            data-pg="dashboard"
+            onclick="navigate('dashboard')"
+          >
+            <span class="ico">◈</span> Dashboard
+          </div>
+          <div class="s-item" data-pg="clients" onclick="navigate('clients')">
+            <span class="ico">⬡</span> Clients
+          </div>
+          <div class="s-item disabled"><span class="ico">○</span> Users</div>
+          <div class="s-item disabled">
+            <span class="ico">≡</span> Audit Logs
+          </div>
+        </nav>
+        <div class="s-footer">
+          <button class="logout-btn" onclick="doLogout()">
+            <span>⎋</span> Sign out
+          </button>
+        </div>
+      </aside>
+
+      <!-- Main -->
+      <main id="main">
+        <!-- Dashboard page -->
+        <div
+          id="pg-dashboard"
+          class="hidden"
+          style="display: flex; flex-direction: column; flex: 1"
+        >
+          <div class="ph">
+            <div>
+              <div class="ph-title">Dashboard</div>
+              <div class="ph-path">gate / admin</div>
+            </div>
+          </div>
+          <div class="pc">
+            <div class="stats-grid">
+              <div class="stat-card">
+                <div class="stat-lbl">Clients</div>
+                <div class="stat-val" id="dash-clients">—</div>
+                <div class="stat-sub">registered OAuth clients</div>
+              </div>
+              <div class="stat-card">
+                <div class="stat-lbl">Status</div>
+                <div
+                  class="stat-val"
+                  style="font-size: 16px; color: var(--success)"
+                >
+                  ● online
+                </div>
+                <div class="stat-sub">localhost:8080</div>
+              </div>
+            </div>
+            <div class="sec-title">Quick Access</div>
+            <div class="nav-cards">
+              <div class="nav-card" onclick="navigate('clients')">
+                <div class="nc-icon">⬡</div>
+                <div class="nc-title">OAuth Clients</div>
+                <div class="nc-desc">
+                  Register and manage OAuth 2.0 clients. Configure redirect URIs
+                  and allowed scopes.
+                </div>
+              </div>
+              <div class="nav-card dis">
+                <div class="nc-icon">○</div>
+                <div class="nc-title">Users</div>
+                <div class="nc-desc">
+                  Manage accounts, roles, and permissions. Lock, unlock, and
+                  review activity.
+                </div>
+              </div>
+              <div class="nav-card dis">
+                <div class="nc-icon">≡</div>
+                <div class="nc-title">Audit Logs</div>
+                <div class="nc-desc">
+                  Review security events and operations across all services.
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Clients page -->
+        <div
+          id="pg-clients"
+          class="hidden"
+          style="display: flex; flex-direction: column; flex: 1"
+        >
+          <div class="ph">
+            <div>
+              <div class="ph-title">OAuth Clients</div>
+              <div class="ph-path">gate / admin / clients</div>
+            </div>
+            <button class="btn btn-primary" onclick="openCreate()">
+              + New Client
+            </button>
+          </div>
+          <div class="pc">
+            <div
+              id="cl-loading"
+              class="hidden"
+              style="text-align: center; padding: 48px"
+            >
+              <span class="spin"></span>
+            </div>
+            <div id="cl-error" class="alert alert-error hidden"></div>
+            <div id="cl-table" class="table-wrap hidden">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Name</th>
+                    <th>Type</th>
+                    <th>Allowed Scopes</th>
+                    <th>Created</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody id="cl-tbody"></tbody>
+              </table>
+            </div>
+            <div id="cl-empty" class="empty hidden">
+              <div class="empty-ico">⬡</div>
+              <div class="empty-title">No clients yet</div>
+              <div style="font-size: 12px; margin-top: 6px">
+                Create your first OAuth client to get started.
+              </div>
+            </div>
+            <div class="pgn" id="cl-pgn"></div>
+          </div>
+        </div>
+      </main>
+    </div>
+
+    <!-- ── Panel ────────────────────────────────── -->
+    <div id="panel-bd" class="backdrop hidden" onclick="closePanel(event)">
+      <div class="panel" onclick="event.stopPropagation()">
+        <div class="panel-hd">
+          <span class="panel-title" id="panel-title">—</span>
+          <button class="panel-close" onclick="closePanel()">✕</button>
+        </div>
+        <div class="panel-body" id="panel-body"></div>
+        <div class="panel-ft" id="panel-ft"></div>
+      </div>
+    </div>
+
+    <!-- ── Confirm dialog ────────────────────────── -->
+    <div id="dlg" class="dlg-wrap hidden">
+      <div class="dlg">
+        <div class="dlg-title" id="dlg-title"></div>
+        <div class="dlg-desc" id="dlg-desc"></div>
+        <div class="dlg-ft">
+          <button class="btn btn-ghost btn-sm" onclick="closeDlg()">
+            Cancel
+          </button>
+          <button class="btn btn-danger btn-sm" id="dlg-ok">Confirm</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── Toast ─────────────────────────────────── -->
+    <div id="toast"></div>
+
+    <script>
+      // ─────────────────────────────────────────────────
+      // Config
+      // ─────────────────────────────────────────────────
+      const API = "http://localhost:8080";
+      const TKEY = "gate_admin_token";
+
+      // ─────────────────────────────────────────────────
+      // Auth helpers
+      // ─────────────────────────────────────────────────
+      const getToken = () => localStorage.getItem(TKEY);
+      const setToken = (t) => localStorage.setItem(TKEY, t);
+      const clearToken = () => localStorage.removeItem(TKEY);
+
+      // ─────────────────────────────────────────────────
+      // API
+      // ─────────────────────────────────────────────────
+      async function api(method, path, body) {
+        const headers = { "Content-Type": "application/json" };
+        const token = getToken();
+        if (token) headers["Authorization"] = `Bearer ${token}`;
+
+        const res = await fetch(API + path, {
+          method,
+          headers,
+          body: body != null ? JSON.stringify(body) : undefined,
+        });
+
+        if (res.status === 401) {
+          clearToken();
+          showLogin();
+          throw new Error("Unauthorized");
+        }
+
+        if (!res.ok) {
+          const d = await res.json().catch(() => ({}));
+          throw new Error(
+            d.error_description || d.error || d.message || `HTTP ${res.status}`,
+          );
+        }
+
+        return res.status === 204 ? null : res.json();
+      }
+
+      // ─────────────────────────────────────────────────
+      // Toast
+      // ─────────────────────────────────────────────────
+      function toast(msg, type = "ok") {
+        const el = document.createElement("div");
+        el.className = `toast ${type}`;
+        el.textContent = msg;
+        document.getElementById("toast").appendChild(el);
+        setTimeout(() => el.remove(), 3200);
+      }
+
+      // ─────────────────────────────────────────────────
+      // Confirm dialog
+      // ─────────────────────────────────────────────────
+      function confirm(title, desc, onOk) {
+        document.getElementById("dlg-title").textContent = title;
+        document.getElementById("dlg-desc").textContent = desc;
+        const btn = document.getElementById("dlg-ok");
+        btn.onclick = () => {
+          closeDlg();
+          onOk();
+        };
+        document.getElementById("dlg").classList.remove("hidden");
+      }
+      function closeDlg() {
+        document.getElementById("dlg").classList.add("hidden");
+      }
+
+      // ─────────────────────────────────────────────────
+      // Panel
+      // ─────────────────────────────────────────────────
+      function openPanel(title, body, footer) {
+        document.getElementById("panel-title").textContent = title;
+        document.getElementById("panel-body").innerHTML = body;
+        document.getElementById("panel-ft").innerHTML = footer;
+        document.getElementById("panel-bd").classList.remove("hidden");
+      }
+      function closePanel(e) {
+        if (!e || e.target === document.getElementById("panel-bd"))
+          document.getElementById("panel-bd").classList.add("hidden");
+      }
+
+      // ─────────────────────────────────────────────────
+      // Routing
+      // ─────────────────────────────────────────────────
+      function showLogin() {
+        document.getElementById("page-login").classList.remove("hidden");
+        document.getElementById("page-login").style.display = "flex";
+        document.getElementById("page-app").classList.add("hidden");
+      }
+
+      function showApp(pg) {
+        document.getElementById("page-login").classList.add("hidden");
+        document.getElementById("page-app").classList.remove("hidden");
+        document.getElementById("page-app").style.display = "flex";
+
+        ["dashboard", "clients"].forEach((id) => {
+          const el = document.getElementById(`pg-${id}`);
+          if (id === pg) {
+            el.classList.remove("hidden");
+            el.style.display = "flex";
+          } else {
+            el.classList.add("hidden");
+          }
+        });
+
+        document.querySelectorAll(".s-item[data-pg]").forEach((el) => {
+          el.classList.toggle("active", el.dataset.pg === pg);
+        });
+      }
+
+      function navigate(pg) {
+        if (!getToken()) {
+          showLogin();
+          return;
+        }
+        showApp(pg);
+        if (pg === "dashboard") loadDashboard();
+        if (pg === "clients") loadClients();
+      }
+
+      // ─────────────────────────────────────────────────
+      // Login / Logout
+      // ─────────────────────────────────────────────────
+      async function doLogin() {
+        const email = document.getElementById("inp-email").value.trim();
+        const pw = document.getElementById("inp-pw").value;
+        const errEl = document.getElementById("login-err");
+        const btn = document.getElementById("login-btn");
+
+        if (!email || !pw) {
+          errEl.textContent = "Email and password are required.";
+          errEl.classList.remove("hidden");
+          return;
+        }
+
+        btn.disabled = true;
+        btn.textContent = "Signing in…";
+        errEl.classList.add("hidden");
+
+        try {
+          const data = await api("POST", "/api/v1/auth/login", {
+            email,
+            password: pw,
+          });
+          setToken(data.access_token);
+          navigate("dashboard");
+        } catch (e) {
+          errEl.textContent = e.message;
+          errEl.classList.remove("hidden");
+          btn.disabled = false;
+          btn.textContent = "Sign in";
+        }
+      }
+
+      function doLogout() {
+        clearToken();
+        showLogin();
+      }
+
+      document.addEventListener("keydown", (e) => {
+        if (
+          e.key === "Enter" &&
+          !document.getElementById("page-login").classList.contains("hidden")
+        )
+          doLogin();
+      });
+
+      // ─────────────────────────────────────────────────
+      // Dashboard
+      // ─────────────────────────────────────────────────
+      async function loadDashboard() {
+        try {
+          const d = await api("GET", "/api/v1/admin/clients?limit=1&offset=0");
+          document.getElementById("dash-clients").textContent = d.total ?? "—";
+        } catch {
+          /* silently ignore */
+        }
+      }
+
+      // ─────────────────────────────────────────────────
+      // Clients list
+      // ─────────────────────────────────────────────────
+      let clOffset = 0;
+      const clLimit = 20;
+      let clTotal = 0;
+
+      async function loadClients() {
+        const ldEl = document.getElementById("cl-loading");
+        const errEl = document.getElementById("cl-error");
+        const tblEl = document.getElementById("cl-table");
+        const empEl = document.getElementById("cl-empty");
+
+        ldEl.classList.remove("hidden");
+        tblEl.classList.add("hidden");
+        empEl.classList.add("hidden");
+        errEl.classList.add("hidden");
+
+        try {
+          const d = await api(
+            "GET",
+            `/api/v1/admin/clients?offset=${clOffset}&limit=${clLimit}`,
+          );
+          clTotal = d.total ?? d.clients?.length ?? 0;
+          const clients = d.clients ?? [];
+
+          if (clients.length === 0) {
+            empEl.classList.remove("hidden");
+          } else {
+            renderTable(clients);
+            tblEl.classList.remove("hidden");
+          }
+          renderPgn();
+        } catch (e) {
+          errEl.textContent = e.message;
+          errEl.classList.remove("hidden");
+        } finally {
+          ldEl.classList.add("hidden");
+        }
+      }
+
+      function renderTable(clients) {
+        document.getElementById("cl-tbody").innerHTML = clients
+          .map((c) => {
+            const type = c.client_type ?? c.type ?? "";
+            return `
+      <tr>
+        <td>
+          <div class="text-bright" style="font-weight:500">${x(c.name)}</div>
+          <div class="td-id">${x(c.id)}</div>
+        </td>
+        <td><span class="badge badge-${x(type)}">${x(type)}</span></td>
+        <td>
+          <div class="scope-list">
+            ${(c.allowed_scopes ?? []).map((s) => `<span class="scope-tag">${x(s)}</span>`).join("")}
+          </div>
+        </td>
+        <td class="text-muted" style="font-size:11px">${fmtDate(c.created_at)}</td>
+        <td>
+          <div class="td-actions">
+            <button class="btn btn-ghost btn-sm" onclick='viewClient(${JSON.stringify(c.id)})'>View</button>
+            <button class="btn btn-ghost btn-sm" onclick='rotateSecret(${JSON.stringify(c.id)},${JSON.stringify(c.name)})'>Rotate</button>
+            <button class="btn btn-danger btn-sm" onclick='deleteClient(${JSON.stringify(c.id)},${JSON.stringify(c.name)})'>Delete</button>
+          </div>
+        </td>
+      </tr>`;
+          })
+          .join("");
+      }
+
+      function renderPgn() {
+        const el = document.getElementById("cl-pgn");
+        const total = Math.ceil(clTotal / clLimit);
+        const cur = Math.floor(clOffset / clLimit) + 1;
+        if (total <= 1) {
+          el.innerHTML = "";
+          return;
+        }
+        el.innerHTML = `
+    <span class="pgn-info">${clOffset + 1}–${Math.min(clOffset + clLimit, clTotal)} / ${clTotal}</span>
+    <button class="btn btn-ghost btn-sm" onclick="pgMove(-1)" ${cur === 1 ? "disabled" : ""}>← Prev</button>
+    <button class="btn btn-ghost btn-sm" onclick="pgMove(1)"  ${cur === total ? "disabled" : ""}>Next →</button>`;
+      }
+
+      function pgMove(dir) {
+        clOffset = Math.max(0, clOffset + dir * clLimit);
+        loadClients();
+      }
+
+      // ─────────────────────────────────────────────────
+      // Create client
+      // ─────────────────────────────────────────────────
+      const SCOPES = ["openid", "profile", "email", "offline_access"];
+      const GRANTS = [
+        "authorization_code",
+        "client_credentials",
+        "refresh_token",
+      ];
+
+      function openCreate() {
+        window._cs = {
+          type: "confidential",
+          scopes: new Set(["openid", "profile", "email"]),
+          grants: new Set(["authorization_code"]),
+        };
+
+        openPanel(
+          "New OAuth Client",
+          `
+    <div id="ce-err" class="alert alert-error hidden"></div>
+    <div class="fg">
+      <label class="lbl">Client Name</label>
+      <input type="text" id="new-name" placeholder="my-application">
+    </div>
+    <div class="fg">
+      <label class="lbl">Client Type</label>
+      <div class="radio-group">
+        <label class="radio-opt sel" id="ro-conf" onclick="selType('confidential')">
+          <input type="radio" name="ct" value="confidential" checked>
+          <div><div class="radio-lbl">Confidential</div><div class="radio-desc">Server-side apps</div></div>
+        </label>
+        <label class="radio-opt" id="ro-pub" onclick="selType('public')">
+          <input type="radio" name="ct" value="public">
+          <div><div class="radio-lbl">Public</div><div class="radio-desc">SPA / mobile</div></div>
+        </label>
+      </div>
+    </div>
+    <div class="fg">
+      <label class="lbl">Redirect URIs <span class="text-muted">(one per line)</span></label>
+      <textarea id="new-uris" placeholder="https://myapp.example.com/callback&#10;http://localhost:3000/callback"></textarea>
+    </div>
+    <div class="fg">
+      <label class="lbl">Allowed Scopes</label>
+      <div class="cb-group">
+        ${SCOPES.map(
+          (s) => `
+          <label class="cb-item ${window._cs.scopes.has(s) ? "chk" : ""}" id="sc-${s}" onclick="togScope('${s}')">
+            <input type="checkbox" ${window._cs.scopes.has(s) ? "checked" : ""}>${s}
+          </label>`,
+        ).join("")}
+      </div>
+      <div class="mt-12">
+        <input type="text" id="new-extra" placeholder="custom:read custom:write" style="font-size:12px">
+        <div class="field-hint">Additional scopes (space-separated)</div>
+      </div>
+    </div>
+    <div class="fg">
+      <label class="lbl">Grant Types</label>
+      <div class="cb-group">
+        ${GRANTS.map(
+          (g) => `
+          <label class="cb-item ${window._cs.grants.has(g) ? "chk" : ""}" id="gr-${g}" onclick="togGrant('${g}')">
+            <input type="checkbox" ${window._cs.grants.has(g) ? "checked" : ""}>${g}
+          </label>`,
+        ).join("")}
+      </div>
+    </div>
+  `,
+          `
+    <button class="btn btn-ghost" onclick="closePanel()">Cancel</button>
+    <button class="btn btn-primary" id="create-btn" onclick="submitCreate()">Create Client</button>
+  `,
+        );
+      }
+
+      function selType(t) {
+        window._cs.type = t;
+        document
+          .getElementById("ro-conf")
+          .classList.toggle("sel", t === "confidential");
+        document
+          .getElementById("ro-pub")
+          .classList.toggle("sel", t === "public");
+      }
+
+      function togScope(s) {
+        const el = document.getElementById(`sc-${s}`);
+        const st = window._cs.scopes;
+        if (st.has(s)) {
+          st.delete(s);
+          el.classList.remove("chk");
+          el.querySelector("input").checked = false;
+        } else {
+          st.add(s);
+          el.classList.add("chk");
+          el.querySelector("input").checked = true;
+        }
+      }
+
+      function togGrant(g) {
+        const el = document.getElementById(`gr-${g}`);
+        const st = window._cs.grants;
+        if (st.has(g)) {
+          st.delete(g);
+          el.classList.remove("chk");
+          el.querySelector("input").checked = false;
+        } else {
+          st.add(g);
+          el.classList.add("chk");
+          el.querySelector("input").checked = true;
+        }
+      }
+
+      async function submitCreate() {
+        const cs = window._cs;
+        const name = document.getElementById("new-name").value.trim();
+        const uris = document.getElementById("new-uris").value.trim();
+        const extra = document.getElementById("new-extra").value.trim();
+        const errEl = document.getElementById("ce-err");
+        const btn = document.getElementById("create-btn");
+
+        if (!name) {
+          errEl.textContent = "Client name is required.";
+          errEl.classList.remove("hidden");
+          return;
+        }
+
+        const redirectURIs = uris
+          ? uris
+              .split("\n")
+              .map((s) => s.trim())
+              .filter(Boolean)
+          : [];
+        const scopes = [...cs.scopes];
+        if (extra) scopes.push(...extra.split(/\s+/).filter(Boolean));
+        const grantTypes = [...cs.grants];
+
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spin"></span> Creating…';
+        errEl.classList.add("hidden");
+
+        try {
+          const client = await api("POST", "/api/v1/admin/clients", {
+            name,
+            client_type: cs.type,
+            redirect_uris: redirectURIs,
+            allowed_scopes: scopes,
+            grant_types: grantTypes,
+          });
+
+          closePanel();
+          toast(`Client "${client.name}" created.`, "ok");
+          showSecret(client.name, client.id, client.secret, true);
+          loadClients();
+        } catch (e) {
+          errEl.textContent = e.message;
+          errEl.classList.remove("hidden");
+          btn.disabled = false;
+          btn.textContent = "Create Client";
+        }
+      }
+
+      // ─────────────────────────────────────────────────
+      // View client
+      // ─────────────────────────────────────────────────
+      async function viewClient(id) {
+        openPanel(
+          "Client Details",
+          '<div style="text-align:center;padding:32px"><span class="spin"></span></div>',
+          "",
+        );
+        try {
+          const c = await api("GET", `/api/v1/admin/clients/${id}`);
+          const type = c.client_type ?? c.type ?? "";
+          const rows = [
+            ["ID", `<span style="font-size:11px">${x(c.id)}</span>`],
+            [
+              "Name",
+              `<span class="text-bright" style="font-weight:500">${x(c.name)}</span>`,
+            ],
+            ["Type", `<span class="badge badge-${x(type)}">${x(type)}</span>`],
+            [
+              "Redirect URIs",
+              (c.redirect_uris ?? []).length
+                ? (c.redirect_uris ?? [])
+                    .map((u) => `<div style="font-size:11px">${x(u)}</div>`)
+                    .join("")
+                : '<span class="text-muted">none</span>',
+            ],
+            [
+              "Scopes",
+              `<div class="scope-list">${(c.allowed_scopes ?? []).map((s) => `<span class="scope-tag">${x(s)}</span>`).join("")}</div>`,
+            ],
+            ["Created", fmtDate(c.created_at)],
+          ];
+
+          document.getElementById("panel-body").innerHTML = rows
+            .map(
+              ([k, v]) =>
+                `<div class="det-row"><div class="det-k">${k}</div><div class="det-v">${v}</div></div>`,
+            )
+            .join("");
+
+          document.getElementById("panel-ft").innerHTML = `
+      <button class="btn btn-ghost" onclick="closePanel()">Close</button>
+      <button class="btn btn-ghost" onclick="closePanel();rotateSecret(${JSON.stringify(c.id)},${JSON.stringify(c.name)})">Rotate</button>
+      <button class="btn btn-danger" onclick="closePanel();deleteClient(${JSON.stringify(c.id)},${JSON.stringify(c.name)})">Delete</button>`;
+        } catch (e) {
+          document.getElementById("panel-body").innerHTML =
+            `<div class="alert alert-error">${x(e.message)}</div>`;
+        }
+      }
+
+      // ─────────────────────────────────────────────────
+      // Delete
+      // ─────────────────────────────────────────────────
+      function deleteClient(id, name) {
+        confirm(
+          "Delete Client",
+          `Delete "${name}"? This cannot be undone. All associated tokens will be invalidated.`,
+          async () => {
+            try {
+              await api("DELETE", `/api/v1/admin/clients/${id}`);
+              toast(`"${name}" deleted.`, "ok");
+              loadClients();
+            } catch (e) {
+              toast(e.message, "err");
+            }
+          },
+        );
+      }
+
+      // ─────────────────────────────────────────────────
+      // Rotate secret
+      // ─────────────────────────────────────────────────
+      function rotateSecret(id, name) {
+        confirm(
+          "Rotate Client Secret",
+          `Generate a new secret for "${name}"? The current secret will be invalidated immediately.`,
+          async () => {
+            try {
+              const client = await api(
+                "POST",
+                `/api/v1/admin/clients/${id}/rotate-secret`,
+              );
+              toast("Secret rotated.", "ok");
+              showSecret(client.name, client.id, client.secret, false);
+            } catch (e) {
+              toast(e.message, "err");
+            }
+          },
+        );
+      }
+
+      function showSecret(name, id, secret, isNew) {
+        openPanel(
+          isNew ? `Client: ${name}` : `New Secret: ${name}`,
+          `
+    <div class="alert ${isNew ? "alert-success" : "alert-info"} mb-16">
+      ${isNew ? "✓ Client created." : "↻ Secret rotated."}
+      <strong>Copy the secret now — it will not be shown again.</strong>
+    </div>
+    <div class="fg">
+      <label class="lbl">Client ID</label>
+      <div class="secret-box" style="color:var(--text-bright)">${x(id)}</div>
+      <button class="copy-btn" onclick="copyText(${JSON.stringify(id)}, this)">⎘ Copy ID</button>
+    </div>
+    <div class="fg">
+      <label class="lbl">Client Secret</label>
+      <div class="secret-box">${x(secret)}</div>
+      <button class="copy-btn" onclick="copyText(${JSON.stringify(secret)}, this)">⎘ Copy Secret</button>
+    </div>
+  `,
+          `<button class="btn btn-primary" onclick="closePanel()">Done</button>`,
+        );
+      }
+
+      async function copyText(text, btn) {
+        try {
+          await navigator.clipboard.writeText(text);
+          const orig = btn.textContent;
+          btn.textContent = "✓ Copied";
+          setTimeout(() => {
+            btn.textContent = orig;
+          }, 2000);
+        } catch {
+          toast("Copy failed.", "err");
+        }
+      }
+
+      // ─────────────────────────────────────────────────
+      // Utils
+      // ─────────────────────────────────────────────────
+      function x(s) {
+        return String(s ?? "")
+          .replace(/&/g, "&amp;")
+          .replace(/</g, "&lt;")
+          .replace(/>/g, "&gt;")
+          .replace(/"/g, "&quot;")
+          .replace(/'/g, "&#39;");
+      }
+
+      function fmtDate(s) {
+        if (!s) return "—";
+        try {
+          return new Date(s).toLocaleDateString("ja-JP", {
+            year: "numeric",
+            month: "2-digit",
+            day: "2-digit",
+          });
+        } catch {
+          return s;
+        }
+      }
+
+      // ─────────────────────────────────────────────────
+      // Init
+      // ─────────────────────────────────────────────────
+      if (getToken()) {
+        navigate("dashboard");
+      } else {
+        showLogin();
+      }
+    </script>
+  </body>
+</html>

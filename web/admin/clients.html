@@ -1,0 +1,722 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>OAuth Clients - gate admin</title>
+    <link rel="stylesheet" href="../shared/variables.css" />
+    <link rel="stylesheet" href="../shared/shell.css" />
+    <link rel="stylesheet" href="../shared/components.css" />
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <div class="page-layout">
+      <!-- Sidebar -->
+      <aside class="sidebar">
+        <div class="sidebar-logo">
+          <span>gate</span>
+          <small>admin console</small>
+        </div>
+
+        <nav>
+          <div class="nav-section-label">Management</div>
+          <a class="nav-item" href="./index.html">
+            <span class="nav-icon">#</span>
+            Dashboard
+          </a>
+          <a class="nav-item active" href="./clients.html">
+            <span class="nav-icon">@</span>
+            Clients
+          </a>
+          <a class="nav-item" href="./users.html">
+            <span class="nav-icon">*</span>
+            Users
+          </a>
+        </nav>
+
+        <div class="sidebar-bottom">
+          <div class="sidebar-user" id="sidebar-user"></div>
+          <button
+            class="btn btn-ghost btn-sm"
+            style="margin-top: 8px; width: 100%"
+            onclick="signOut()"
+          >
+            Sign out
+          </button>
+        </div>
+      </aside>
+
+      <!-- Main content -->
+      <div class="main-content">
+        <div class="page-header">
+          <h1>OAuth Clients</h1>
+          <p>Manage registered OAuth applications and credentials.</p>
+        </div>
+
+        <div class="content-area">
+          <div class="search-bar">
+            <div class="search-input-wrap">
+              <span class="search-input-icon">/</span>
+              <input
+                class="search-input"
+                type="text"
+                id="search-input"
+                placeholder="Search clients..."
+                oninput="filterClients()"
+              />
+            </div>
+            <button class="btn btn-primary" onclick="openNewClientModal()">
+              + New Client
+            </button>
+          </div>
+
+          <div class="table-container">
+            <table class="data-table" id="clients-table">
+              <thead>
+                <tr>
+                  <th>Client ID</th>
+                  <th>Name</th>
+                  <th>Type</th>
+                  <th>Redirect URIs</th>
+                  <th>Created</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody id="clients-tbody">
+                <tr>
+                  <td colspan="6">
+                    <div class="empty-state" style="padding: 32px">
+                      <p>Loading clients...</p>
+                    </div>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Side panel -->
+    <div
+      class="panel-overlay hidden"
+      id="panel-overlay"
+      onclick="closePanel()"
+    ></div>
+    <div class="side-panel" id="detail-panel">
+      <div class="side-panel-header">
+        <span class="side-panel-title">Client Details</span>
+        <button class="side-panel-close" onclick="closePanel()">x</button>
+      </div>
+      <div class="side-panel-body" id="panel-body">
+        <!-- Populated by JS -->
+      </div>
+      <div class="side-panel-footer">
+        <button
+          class="btn btn-danger btn-sm"
+          id="panel-delete-btn"
+          onclick="deleteFromPanel()"
+        >
+          Delete Client
+        </button>
+        <button
+          class="btn btn-secondary btn-sm"
+          id="panel-rotate-btn"
+          onclick="rotateFromPanel()"
+        >
+          Rotate Secret
+        </button>
+      </div>
+    </div>
+
+    <!-- Delete modal -->
+    <div class="modal-overlay hidden" id="delete-modal">
+      <div class="modal">
+        <div class="modal-header">
+          <span class="modal-title">Delete Client</span>
+          <button class="modal-close" onclick="closeDeleteModal()">x</button>
+        </div>
+        <p
+          style="
+            font-size: 12px;
+            color: var(--text-secondary);
+            margin-bottom: 8px;
+          "
+        >
+          Are you sure you want to delete this client? This action cannot be
+          undone. All tokens issued to this client will be revoked.
+        </p>
+        <div class="modal-footer">
+          <button class="btn btn-secondary" onclick="closeDeleteModal()">
+            Cancel
+          </button>
+          <button
+            class="btn btn-danger"
+            id="delete-confirm-btn"
+            onclick="confirmDelete()"
+          >
+            Delete
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Rotate secret modal -->
+    <div class="modal-overlay hidden" id="rotate-modal">
+      <div class="modal">
+        <div class="modal-header">
+          <span class="modal-title">Rotate Client Secret</span>
+          <button class="modal-close" onclick="closeRotateModal()">x</button>
+        </div>
+        <div id="rotate-modal-body">
+          <p
+            style="
+              font-size: 12px;
+              color: var(--text-secondary);
+              margin-bottom: 16px;
+            "
+          >
+            A new client secret will be generated. The existing secret will be
+            immediately invalidated.
+          </p>
+        </div>
+        <div id="rotate-secret-result" class="hidden">
+          <div class="alert alert-warning" style="margin-bottom: 16px">
+            Save this secret now. It will not be shown again.
+          </div>
+          <div class="credential-group">
+            <div class="credential-label">New Client Secret</div>
+            <div class="secret-box" id="rotate-new-secret">
+              <button
+                class="btn btn-secondary btn-sm copy-btn"
+                onclick="copySecret('rotate-new-secret')"
+              >
+                Copy
+              </button>
+              <span></span>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-secondary" onclick="closeRotateModal()">
+            Close
+          </button>
+          <button
+            class="btn btn-primary"
+            id="rotate-confirm-btn"
+            onclick="confirmRotate()"
+          >
+            Rotate Secret
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- New client modal -->
+    <div class="modal-overlay hidden" id="new-client-modal">
+      <div class="modal">
+        <div class="modal-header">
+          <span class="modal-title">New OAuth Client</span>
+          <button class="modal-close" onclick="closeNewClientModal()">x</button>
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="nc-name">Name</label>
+          <input
+            class="form-input"
+            type="text"
+            id="nc-name"
+            placeholder="My Application"
+          />
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="nc-type">Client Type</label>
+          <select class="form-input" id="nc-type">
+            <option value="confidential">confidential</option>
+            <option value="public">public</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="nc-uris"
+            >Redirect URIs (one per line)</label
+          >
+          <textarea
+            class="form-input"
+            id="nc-uris"
+            rows="3"
+            placeholder="http://localhost:3000/callback"
+          ></textarea>
+        </div>
+        <div
+          id="nc-error"
+          class="alert alert-error hidden"
+          style="margin-bottom: 8px"
+        >
+          <span></span>
+        </div>
+        <div id="nc-result" class="hidden">
+          <div class="alert alert-warning" style="margin-bottom: 12px">
+            Save credentials below. The secret will not be shown again.
+          </div>
+          <div class="credential-group">
+            <div class="credential-label">Client ID</div>
+            <div class="secret-box" id="nc-client-id">
+              <button
+                class="btn btn-secondary btn-sm copy-btn"
+                onclick="copySecret('nc-client-id')"
+              >
+                Copy</button
+              ><span></span>
+            </div>
+          </div>
+          <div class="credential-group" id="nc-secret-group">
+            <div class="credential-label">Client Secret</div>
+            <div class="secret-box" id="nc-client-secret">
+              <button
+                class="btn btn-secondary btn-sm copy-btn"
+                onclick="copySecret('nc-client-secret')"
+              >
+                Copy</button
+              ><span></span>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-secondary" onclick="closeNewClientModal()">
+            Close
+          </button>
+          <button
+            class="btn btn-primary"
+            id="nc-submit-btn"
+            onclick="createClient()"
+          >
+            Create Client
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <div class="toast-container" id="toast-container"></div>
+
+    <script>
+      const API_BASE = "http://localhost:8080";
+      let allClients = [];
+      let currentPanelClientId = null;
+      let pendingDeleteId = null;
+      let pendingRotateId = null;
+
+      function getToken() {
+        return localStorage.getItem("access_token");
+      }
+
+      function authHeaders() {
+        return {
+          Authorization: "Bearer " + getToken(),
+          "Content-Type": "application/json",
+        };
+      }
+
+      function signOut() {
+        localStorage.removeItem("access_token");
+        localStorage.removeItem("user_email");
+        window.location.href = "./login.html";
+      }
+
+      function showToast(message, type = "success") {
+        const container = document.getElementById("toast-container");
+        const toast = document.createElement("div");
+        toast.className = `toast ${type}`;
+        toast.textContent = message;
+        container.appendChild(toast);
+        setTimeout(() => toast.remove(), 3000);
+      }
+
+      function escapeHtml(str) {
+        if (!str) return "-";
+        return String(str)
+          .replace(/&/g, "&amp;")
+          .replace(/</g, "&lt;")
+          .replace(/>/g, "&gt;")
+          .replace(/"/g, "&quot;");
+      }
+
+      function copySecret(elementId) {
+        const el = document.getElementById(elementId);
+        const span = el.querySelector("span");
+        const text = span ? span.textContent : el.textContent;
+        navigator.clipboard
+          .writeText(text)
+          .then(() => {
+            showToast("Copied to clipboard.");
+          })
+          .catch(() => {
+            const ta = document.createElement("textarea");
+            ta.value = text;
+            document.body.appendChild(ta);
+            ta.select();
+            document.execCommand("copy");
+            document.body.removeChild(ta);
+            showToast("Copied to clipboard.");
+          });
+      }
+
+      function filterClients() {
+        const query = document
+          .getElementById("search-input")
+          .value.toLowerCase();
+        const filtered = allClients.filter((c) => {
+          const name = (c.name || c.client_name || "").toLowerCase();
+          const id = (c.client_id || "").toLowerCase();
+          return name.includes(query) || id.includes(query);
+        });
+        renderTable(filtered);
+      }
+
+      function renderTable(clients) {
+        const tbody = document.getElementById("clients-tbody");
+        if (!clients || clients.length === 0) {
+          tbody.innerHTML = `<tr><td colspan="6"><div class="empty-state" style="padding:32px;"><h3>No clients found</h3><p>Register a new OAuth client to get started.</p></div></td></tr>`;
+          return;
+        }
+
+        tbody.innerHTML = clients
+          .map((c) => {
+            const typeClass =
+              c.client_type === "public" ? "badge-gray" : "badge-amber";
+            const created = c.created_at
+              ? new Date(c.created_at).toLocaleDateString()
+              : "-";
+            const uriCount = (c.redirect_uris || []).length;
+            return `
+          <tr>
+            <td class="cell-mono">${escapeHtml(c.client_id)}</td>
+            <td>${escapeHtml(c.name || c.client_name || "Unnamed")}</td>
+            <td><span class="badge ${typeClass}">${escapeHtml(c.client_type || "confidential")}</span></td>
+            <td>${uriCount}</td>
+            <td>${created}</td>
+            <td>
+              <div class="table-actions">
+                <button class="btn btn-secondary btn-sm" onclick="openPanel('${escapeHtml(c.client_id)}')">Details</button>
+                <button class="btn btn-ghost btn-sm" onclick="openRotateModal('${escapeHtml(c.client_id)}')">Rotate</button>
+                <button class="btn btn-danger btn-sm" onclick="openDeleteModal('${escapeHtml(c.client_id)}')">Delete</button>
+              </div>
+            </td>
+          </tr>
+        `;
+          })
+          .join("");
+      }
+
+      function openPanel(clientId) {
+        const client = allClients.find((c) => c.client_id === clientId);
+        if (!client) return;
+
+        currentPanelClientId = clientId;
+
+        const body = document.getElementById("panel-body");
+        body.innerHTML = `
+        <div class="detail-group">
+          <div class="detail-label">Name</div>
+          <div class="detail-value">${escapeHtml(client.name || client.client_name || "-")}</div>
+        </div>
+        <div class="detail-group">
+          <div class="detail-label">Client ID</div>
+          <div class="detail-value mono">${escapeHtml(client.client_id)}</div>
+        </div>
+        <div class="detail-group">
+          <div class="detail-label">Client Type</div>
+          <div class="detail-value">
+            <span class="badge ${client.client_type === "public" ? "badge-gray" : "badge-amber"}">${escapeHtml(client.client_type || "confidential")}</span>
+          </div>
+        </div>
+        <div class="detail-group">
+          <div class="detail-label">Redirect URIs</div>
+          <div class="detail-value mono" style="font-size:11px; line-height:1.8;">
+            ${(client.redirect_uris || []).map((u) => escapeHtml(u)).join("<br>") || "-"}
+          </div>
+        </div>
+        <div class="detail-group">
+          <div class="detail-label">Scopes</div>
+          <div class="detail-value">${escapeHtml((client.scopes || []).join(", ") || "-")}</div>
+        </div>
+        <div class="detail-group">
+          <div class="detail-label">Grant Types</div>
+          <div class="detail-value">${escapeHtml((client.grant_types || []).join(", ") || "-")}</div>
+        </div>
+        <div class="detail-group">
+          <div class="detail-label">Created</div>
+          <div class="detail-value">${client.created_at ? new Date(client.created_at).toLocaleString() : "-"}</div>
+        </div>
+        <div class="detail-group">
+          <div class="detail-label">Updated</div>
+          <div class="detail-value">${client.updated_at ? new Date(client.updated_at).toLocaleString() : "-"}</div>
+        </div>
+      `;
+
+        document.getElementById("panel-overlay").classList.remove("hidden");
+        document.getElementById("detail-panel").classList.add("open");
+      }
+
+      function closePanel() {
+        document.getElementById("panel-overlay").classList.add("hidden");
+        document.getElementById("detail-panel").classList.remove("open");
+        currentPanelClientId = null;
+      }
+
+      function deleteFromPanel() {
+        if (!currentPanelClientId) return;
+        closePanel();
+        openDeleteModal(currentPanelClientId);
+      }
+
+      function rotateFromPanel() {
+        if (!currentPanelClientId) return;
+        closePanel();
+        openRotateModal(currentPanelClientId);
+      }
+
+      function openDeleteModal(clientId) {
+        pendingDeleteId = clientId;
+        const btn = document.getElementById("delete-confirm-btn");
+        btn.disabled = false;
+        btn.textContent = "Delete";
+        document.getElementById("delete-modal").classList.remove("hidden");
+      }
+
+      function closeDeleteModal() {
+        document.getElementById("delete-modal").classList.add("hidden");
+        pendingDeleteId = null;
+      }
+
+      async function confirmDelete() {
+        if (!pendingDeleteId) return;
+        const btn = document.getElementById("delete-confirm-btn");
+        btn.disabled = true;
+        btn.textContent = "Deleting...";
+
+        try {
+          const res = await fetch(
+            `${API_BASE}/api/v1/admin/clients/${pendingDeleteId}`,
+            {
+              method: "DELETE",
+              headers: authHeaders(),
+            },
+          );
+
+          if (res.status === 401) {
+            signOut();
+            return;
+          }
+
+          if (!res.ok) {
+            const data = await res.json().catch(() => ({}));
+            showToast(data.message || "Delete failed.", "error");
+            btn.disabled = false;
+            btn.textContent = "Delete";
+            return;
+          }
+
+          showToast("Client deleted.");
+          closeDeleteModal();
+          await loadClients();
+        } catch (err) {
+          showToast("Network error.", "error");
+          btn.disabled = false;
+          btn.textContent = "Delete";
+        }
+      }
+
+      function openRotateModal(clientId) {
+        pendingRotateId = clientId;
+        document.getElementById("rotate-secret-result").classList.add("hidden");
+        const btn = document.getElementById("rotate-confirm-btn");
+        btn.classList.remove("hidden");
+        btn.disabled = false;
+        btn.textContent = "Rotate Secret";
+        document.getElementById("rotate-modal").classList.remove("hidden");
+      }
+
+      function closeRotateModal() {
+        document.getElementById("rotate-modal").classList.add("hidden");
+        pendingRotateId = null;
+      }
+
+      async function confirmRotate() {
+        if (!pendingRotateId) return;
+        const btn = document.getElementById("rotate-confirm-btn");
+        btn.disabled = true;
+        btn.textContent = "Rotating...";
+
+        try {
+          const res = await fetch(
+            `${API_BASE}/api/v1/admin/clients/${pendingRotateId}/rotate-secret`,
+            {
+              method: "POST",
+              headers: authHeaders(),
+            },
+          );
+
+          if (res.status === 401) {
+            signOut();
+            return;
+          }
+          const data = await res.json().catch(() => ({}));
+
+          if (!res.ok) {
+            showToast(data.message || "Rotation failed.", "error");
+            btn.disabled = false;
+            btn.textContent = "Rotate Secret";
+            return;
+          }
+
+          document.querySelector("#rotate-new-secret span").textContent =
+            data.client_secret || data.secret || "";
+          document
+            .getElementById("rotate-secret-result")
+            .classList.remove("hidden");
+          btn.classList.add("hidden");
+          showToast("Secret rotated successfully.");
+        } catch (err) {
+          showToast("Network error.", "error");
+          btn.disabled = false;
+          btn.textContent = "Rotate Secret";
+        }
+      }
+
+      function openNewClientModal() {
+        document.getElementById("nc-name").value = "";
+        document.getElementById("nc-type").value = "confidential";
+        document.getElementById("nc-uris").value = "";
+        document.getElementById("nc-error").classList.add("hidden");
+        document.getElementById("nc-result").classList.add("hidden");
+        const btn = document.getElementById("nc-submit-btn");
+        btn.disabled = false;
+        btn.textContent = "Create Client";
+        btn.classList.remove("hidden");
+        document.getElementById("new-client-modal").classList.remove("hidden");
+      }
+
+      function closeNewClientModal() {
+        document.getElementById("new-client-modal").classList.add("hidden");
+      }
+
+      async function createClient() {
+        const name = document.getElementById("nc-name").value.trim();
+        const clientType = document.getElementById("nc-type").value;
+        const urisRaw = document.getElementById("nc-uris").value;
+        const redirectUris = urisRaw
+          .split("\n")
+          .map((u) => u.trim())
+          .filter((u) => u.length > 0);
+        const errorEl = document.getElementById("nc-error");
+        errorEl.classList.add("hidden");
+
+        if (!name) {
+          errorEl.querySelector("span").textContent = "Name is required.";
+          errorEl.classList.remove("hidden");
+          return;
+        }
+
+        if (redirectUris.length === 0) {
+          errorEl.querySelector("span").textContent =
+            "At least one redirect URI is required.";
+          errorEl.classList.remove("hidden");
+          return;
+        }
+
+        const btn = document.getElementById("nc-submit-btn");
+        btn.disabled = true;
+        btn.textContent = "Creating...";
+
+        try {
+          const res = await fetch(`${API_BASE}/api/v1/admin/clients`, {
+            method: "POST",
+            headers: authHeaders(),
+            body: JSON.stringify({
+              name,
+              client_type: clientType,
+              redirect_uris: redirectUris,
+            }),
+          });
+
+          if (res.status === 401) {
+            signOut();
+            return;
+          }
+          const data = await res.json().catch(() => ({}));
+
+          if (!res.ok) {
+            errorEl.querySelector("span").textContent =
+              data.message || data.error || "Creation failed.";
+            errorEl.classList.remove("hidden");
+            btn.disabled = false;
+            btn.textContent = "Create Client";
+            return;
+          }
+
+          document.querySelector("#nc-client-id span").textContent =
+            data.client_id || "";
+          if (data.client_secret) {
+            document.querySelector("#nc-client-secret span").textContent =
+              data.client_secret;
+            document
+              .getElementById("nc-secret-group")
+              .classList.remove("hidden");
+          } else {
+            document.getElementById("nc-secret-group").classList.add("hidden");
+          }
+
+          document.getElementById("nc-result").classList.remove("hidden");
+          btn.classList.add("hidden");
+          showToast("Client created successfully.");
+          await loadClients();
+        } catch (err) {
+          errorEl.querySelector("span").textContent = "Network error.";
+          errorEl.classList.remove("hidden");
+          btn.disabled = false;
+          btn.textContent = "Create Client";
+        }
+      }
+
+      async function loadClients() {
+        try {
+          const res = await fetch(`${API_BASE}/api/v1/admin/clients`, {
+            headers: authHeaders(),
+          });
+
+          if (res.status === 401) {
+            signOut();
+            return;
+          }
+          const data = await res.json().catch(() => ({}));
+
+          if (!res.ok) {
+            showToast(data.message || "Failed to load clients.", "error");
+            return;
+          }
+
+          allClients = Array.isArray(data)
+            ? data
+            : data.clients || data.data || [];
+          renderTable(allClients);
+        } catch (err) {
+          showToast("Network error loading clients.", "error");
+        }
+      }
+
+      function init() {
+        const token = getToken();
+        if (!token) {
+          window.location.href = "./login.html";
+          return;
+        }
+
+        const email = localStorage.getItem("user_email") || "";
+        document.getElementById("sidebar-user").textContent = email;
+
+        loadClients();
+      }
+
+      init();
+    </script>
+  </body>
+</html>
